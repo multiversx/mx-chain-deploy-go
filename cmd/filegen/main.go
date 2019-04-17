@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	filegenHelpTemplate = `NAME:
+	fileGenHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 USAGE:
    {{.HelpName}} {{if .VisibleFlags}}[global options]{{end}}
@@ -48,9 +48,13 @@ VERSION:
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
 )
 
+// The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
+// Those files will then be use to mass-deploy nodes and thus, ensuring that all nodes have the same data to work with
+// The 2 optional flags are used to specify how many private/public keys to generate and the initial minting for each
+// public generated key
 func main() {
 	app := cli.NewApp()
-	cli.AppHelpTemplate = filegenHelpTemplate
+	cli.AppHelpTemplate = fileGenHelpTemplate
 	app.Name = "Deploy Preparation Tool"
 	app.Version = "v0.0.1"
 	app.Usage = "This binary will generate a privkeys.pem and genesis.json files to be used in mass deployment"
