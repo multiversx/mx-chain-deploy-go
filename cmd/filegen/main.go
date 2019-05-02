@@ -42,6 +42,7 @@ VERSION:
 	}
 
 	privKeysFilename = "./privkeys.pem"
+	blsPrivKeysFileName = "./blsPrivateKeys.pem"
 	genesisFilename  = "./genesis.json"
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
@@ -79,6 +80,28 @@ func main() {
 	}
 }
 
+func generateBlsKeys(ctx *cli.Context) error {
+
+	return nil
+}
+
+func generateSchnorrKeys(ctx *cli.Context) error {
+	privKeysFile, err := os.OpenFile(
+		privKeysFilename,
+		os.O_CREATE|os.O_WRONLY,
+		0666)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = privKeysFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}()
+	return nil
+}
+
 func generateFiles(ctx *cli.Context) error {
 	num := ctx.GlobalInt(numPairs.Name)
 	if num < 1 {
@@ -104,6 +127,20 @@ func generateFiles(ctx *cli.Context) error {
 		}
 	}()
 
+	blsPrivKeysFile, err := os.OpenFile(
+		blsPrivKeysFileName,
+		os.O_CREATE|os.O_WRONLY,
+		0666)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = blsPrivKeysFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+	}()
+
 	genesisFile, err := os.OpenFile(
 		genesisFilename,
 		os.O_CREATE|os.O_WRONLY,
@@ -123,12 +160,15 @@ func generateFiles(ctx *cli.Context) error {
 		RoundDuration:      6000,
 		ConsensusGroupSize: uint32(num),
 		MinNodesPerShard:   uint32(num),
-		ElasticSubrounds:   true,
 		InitialNodes:       make([]*sharding.InitialNode, num),
 	}
 
 	suite := kyber.NewBlakeSHA256Ed25519()
 	generator := signing.NewKeyGenerator(suite)
+
+	blsSuite := kyber.NewSuitePairingBn256()
+	blsGenerator := signing.NewKeyGenerator(blsSuite)
+
 	for i := 0; i < num; i++ {
 		sk, pk := generator.GeneratePair()
 		skBytes, err := sk.ToByteArray()
@@ -150,6 +190,24 @@ func generateFiles(ctx *cli.Context) error {
 		}
 
 		err = core.SaveSkToPemFile(privKeysFile, pkHex, skHex)
+		if err != nil {
+			return err
+		}
+
+		blsSk, blsPk := blsGenerator.GeneratePair()
+		blsSkBytes, err := blsSk.ToByteArray()
+		if err != nil {
+			return err
+		}
+
+		blsPkBytes, err := blsPk.ToByteArray()
+		if err != nil {
+			return err
+		}
+		blsSkHex := []byte(hex.EncodeToString(blsSkBytes))
+		blsPkHex := hex.EncodeToString(blsPkBytes)
+
+		err = core.SaveSkToPemFile(blsPrivKeysFile, blsPkHex, blsSkHex)
 		if err != nil {
 			return err
 		}
