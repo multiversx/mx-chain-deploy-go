@@ -4,6 +4,8 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/ElrondNetwork/elrond-go-sandbox v0.0.0-20190417102847-561e3da7aef0 h1:2czbw5/RDe2nJXAYHCJ+kE3Kksoq9wn7i+Sac13Zpgs=
 github.com/ElrondNetwork/elrond-go-sandbox v0.0.0-20190417102847-561e3da7aef0/go.mod h1:xQTxIFJbZnqOq3EYqd0BiJKp6dg+L+PYqFD3m262Ago=
+github.com/ElrondNetwork/elrond-go-sandbox v0.0.0-20190501085721-9d54d6b6ab83 h1:rhR5t64NbV0Uhc8hmnUwMgkedu0RMJxSJmwXRNwRkfc=
+github.com/ElrondNetwork/elrond-go-sandbox v0.0.0-20190501085721-9d54d6b6ab83/go.mod h1:YZ3MBYynnPoQMux7/t6Bo9ypJj7vpIambuyZ/K75BmA=
 github.com/Kubuxu/go-os-helper v0.0.1/go.mod h1:N8B+I7vPCT80IcP58r50u4+gEEcsZETFUpAzWW2ep1Y=
 github.com/aead/siphash v1.0.1/go.mod h1:Nywa3cDsYNNK3gaciGTWPwHt0wlpNV15vwmswBAUSII=
 github.com/beevik/ntp v0.2.0/go.mod h1:hIHWr+l3+/clUnF44zdK+CWW7fO8dR5cIylAQ76NRpg=
