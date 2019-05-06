@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ElrondNetwork/elrond-go-sandbox/crypto"
 	"os"
 
 	"github.com/ElrondNetwork/elrond-go-sandbox/core"
@@ -80,26 +81,21 @@ func main() {
 	}
 }
 
-func generateBlsKeys(ctx *cli.Context) error {
-
-	return nil
-}
-
-func generateSchnorrKeys(ctx *cli.Context) error {
-	privKeysFile, err := os.OpenFile(
-		privKeysFilename,
-		os.O_CREATE|os.O_WRONLY,
-		0666)
+func getIdentifierAndPrivateKey(blsGenerator crypto.KeyGenerator) (string, []byte, error) {
+	blsSk, blsPk := blsGenerator.GeneratePair()
+	blsSkBytes, err := blsSk.ToByteArray()
 	if err != nil {
-		return err
+		return "", nil, err
 	}
-	defer func() {
-		err = privKeysFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	}()
-	return nil
+
+	blsPkBytes, err := blsPk.ToByteArray()
+	if err != nil {
+		return "", nil, err
+	}
+
+	blsSkHex := []byte(hex.EncodeToString(blsSkBytes))
+	blsPkHex := hex.EncodeToString(blsPkBytes)
+	return blsPkHex, blsSkHex, nil
 }
 
 func generateFiles(ctx *cli.Context) error {
@@ -113,47 +109,38 @@ func generateFiles(ctx *cli.Context) error {
 		return errInvalidMintValue
 	}
 
-	privKeysFile, err := os.OpenFile(
-		privKeysFilename,
-		os.O_CREATE|os.O_WRONLY,
-		0666)
-	if err != nil {
-		return err
-	}
+	var err error
+	var privKeysFile, blsPrivKeysFile, genesisFile *os.File
+
 	defer func() {
 		err = privKeysFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-	}()
-
-	blsPrivKeysFile, err := os.OpenFile(
-		blsPrivKeysFileName,
-		os.O_CREATE|os.O_WRONLY,
-		0666)
-	if err != nil {
-		return err
-	}
-	defer func() {
 		err = blsPrivKeysFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-	}()
-
-	genesisFile, err := os.OpenFile(
-		genesisFilename,
-		os.O_CREATE|os.O_WRONLY,
-		0666)
-	if err != nil {
-		return err
-	}
-	defer func() {
 		err = genesisFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 	}()
+
+	privKeysFile, err = os.OpenFile(privKeysFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+
+	blsPrivKeysFile, err = os.OpenFile(blsPrivKeysFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+
+	genesisFile, err = os.OpenFile(genesisFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
 
 	genesis := &sharding.Genesis{
 		StartTime:          0,
@@ -170,19 +157,10 @@ func generateFiles(ctx *cli.Context) error {
 	blsGenerator := signing.NewKeyGenerator(blsSuite)
 
 	for i := 0; i < num; i++ {
-		sk, pk := generator.GeneratePair()
-		skBytes, err := sk.ToByteArray()
+		pkHex, skHex, err := getIdentifierAndPrivateKey(generator)
 		if err != nil {
 			return err
 		}
-
-		pkBytes, err := pk.ToByteArray()
-		if err != nil {
-			return err
-		}
-
-		skHex := []byte(hex.EncodeToString(skBytes))
-		pkHex := hex.EncodeToString(pkBytes)
 
 		genesis.InitialNodes[i] = &sharding.InitialNode{
 			PubKey:  pkHex,
@@ -194,18 +172,10 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 
-		blsSk, blsPk := blsGenerator.GeneratePair()
-		blsSkBytes, err := blsSk.ToByteArray()
+		blsPkHex, blsSkHex, err := getIdentifierAndPrivateKey(blsGenerator)
 		if err != nil {
 			return err
 		}
-
-		blsPkBytes, err := blsPk.ToByteArray()
-		if err != nil {
-			return err
-		}
-		blsSkHex := []byte(hex.EncodeToString(blsSkBytes))
-		blsPkHex := hex.EncodeToString(blsPkBytes)
 
 		err = core.SaveSkToPemFile(blsPrivKeysFile, blsPkHex, blsSkHex)
 		if err != nil {
