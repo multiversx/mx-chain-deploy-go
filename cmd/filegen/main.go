@@ -143,11 +143,14 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	genesis := &sharding.Genesis{
-		StartTime:          0,
-		RoundDuration:      6000,
-		ConsensusGroupSize: uint32(num),
-		MinNodesPerShard:   uint32(num),
-		InitialNodes:       make([]*sharding.InitialNode, num),
+		StartTime:                   0,
+		RoundDuration:               6000,
+		ConsensusGroupSize:          uint32(num),
+		MinNodesPerShard:            uint32(num),
+		InitialNodes:                make([]*sharding.InitialNode, num),
+		MetaChainActive:             true,
+		MetaChainConsensusGroupSize: 1,
+		MetaChainMinNodes:           1,
 	}
 
 	suite := kyber.NewBlakeSHA256Ed25519()
