@@ -41,14 +41,18 @@ VERSION:
 		Usage: "Initial minting for all public keys generated",
 		Value: 1000000000,
 	}
-	numPairsWithBls = cli.IntFlag{
-		Name:  "num-pairs-with-bls",
-		Usage: "Number of private/public keys with bls to generate",
+	numPairsEligible = cli.IntFlag{
+		Name:  "num-pairs-eligible",
+		Usage: "Number of private/public keys eligible to generate",
 		Value: 21,
 	}
+	consensusBls = cli.BoolFlag{
+		Name:  "consensus-bls",
+		Usage: "Eligible nodes will be generated with bls private/public keys",
+	}
 
-	privKeysFilename = "./privateKeys.pem"
-	blsPrivKeysFileName = "./blsPrivateKeys.pem"
+	balancesPrivKeysFileName = "./balancesPrivateKeys.pem"
+	eligiblePrivKeysFileName = "./eligiblePrivateKeys.pem"
 	genesisFilename  = "./genesis.json"
 	nodesFilename  = "./nodes.json"
 
@@ -67,8 +71,9 @@ func main() {
 	cli.AppHelpTemplate = fileGenHelpTemplate
 	app.Name = "Deploy Preparation Tool"
 	app.Version = "v0.0.1"
-	app.Usage = "This binary will generate a privateKeys.pem, blsPrivateKeys.pem, genesis.json and nodes.json files to be used in mass deployment"
-	app.Flags = []cli.Flag{numPairsWithBalances, mintValue, numPairsWithBls}
+	app.Usage = "This binary will generate a balancesPrivateKeys.pem, eligiblePrivateKeys.pem, genesis.json and nodes.json" +
+		" files, to be used in mass deployment"
+	app.Flags = []cli.Flag{numPairsWithBalances, mintValue, numPairsEligible, consensusBls}
 	app.Authors = []cli.Author{
 		{
 			Name:  "The Elrond Team",
@@ -106,8 +111,8 @@ func getIdentifierAndPrivateKey(blsGenerator crypto.KeyGenerator) (string, []byt
 
 func generateFiles(ctx *cli.Context) error {
 	numPairsWithBalances := ctx.GlobalInt(numPairsWithBalances.Name)
-	numPairsWithBls := ctx.GlobalInt(numPairsWithBls.Name)
-	if numPairsWithBalances < 1 || numPairsWithBls < 1 {
+	numPairsEligible := ctx.GlobalInt(numPairsEligible.Name)
+	if numPairsWithBalances < 1 || numPairsEligible < 1 {
 		return errInvalidNumPrivPubKeys
 	}
 
@@ -116,15 +121,19 @@ func generateFiles(ctx *cli.Context) error {
 		return errInvalidMintValue
 	}
 
+	consensusBls := ctx.GlobalBool(consensusBls.Name)
+
 	var err error
-	var privateKeysFile, blsPrivateKeysFile, genesisFile, nodesFile *os.File
+	var balancesPrivKeysFile, eligiblePrivKeysFile, genesisFile, nodesFile *os.File
+	var pkHex string
+	var skHex []byte
 
 	defer func() {
-		err = privateKeysFile.Close()
+		err = balancesPrivKeysFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		err = blsPrivateKeysFile.Close()
+		err = eligiblePrivKeysFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -138,12 +147,12 @@ func generateFiles(ctx *cli.Context) error {
 		}
 	}()
 
-	privateKeysFile, err = os.OpenFile(privKeysFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	balancesPrivKeysFile, err = os.OpenFile(balancesPrivKeysFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
 
-	blsPrivateKeysFile, err = os.OpenFile(blsPrivKeysFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	eligiblePrivKeysFile, err = os.OpenFile(eligiblePrivKeysFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -165,9 +174,9 @@ func generateFiles(ctx *cli.Context) error {
 	nodes := &sharding.Nodes{
 		StartTime:                   0,
 		RoundDuration:               6000,
-		ConsensusGroupSize:          uint32(numPairsWithBls - 1),
-		MinNodesPerShard:            uint32(numPairsWithBls - 1),
-		InitialNodes:                make([]*sharding.InitialNode, numPairsWithBls),
+		ConsensusGroupSize:          uint32(numPairsEligible - 1),
+		MinNodesPerShard:            uint32(numPairsEligible - 1),
+		InitialNodes:                make([]*sharding.InitialNode, numPairsEligible),
 		MetaChainActive:             true,
 		MetaChainConsensusGroupSize: 1,
 		MetaChainMinNodes:           1,
@@ -180,7 +189,7 @@ func generateFiles(ctx *cli.Context) error {
 	blsGenerator := signing.NewKeyGenerator(blsSuite)
 
 	for i := 0; i < numPairsWithBalances; i++ {
-		pkHex, skHex, err := getIdentifierAndPrivateKey(generator)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
 		if err != nil {
 			return err
 		}
@@ -190,7 +199,7 @@ func generateFiles(ctx *cli.Context) error {
 			Balance: fmt.Sprintf("%d", initialMint),
 		}
 
-		err = core.SaveSkToPemFile(privateKeysFile, pkHex, skHex)
+		err = core.SaveSkToPemFile(balancesPrivKeysFile, pkHex, skHex)
 		if err != nil {
 			return err
 		}
@@ -206,17 +215,22 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
-	for i := 0; i < numPairsWithBls; i++ {
-		blsPkHex, blsSkHex, err := getIdentifierAndPrivateKey(blsGenerator)
+	for i := 0; i < numPairsEligible; i++ {
+		if consensusBls {
+			pkHex, skHex, err = getIdentifierAndPrivateKey(blsGenerator)
+		} else {
+			pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
+		}
+
 		if err != nil {
 			return err
 		}
 
 		nodes.InitialNodes[i] = &sharding.InitialNode{
-			PubKey: blsPkHex,
+			PubKey: pkHex,
 		}
 
-		err = core.SaveSkToPemFile(blsPrivateKeysFile, blsPkHex, blsSkHex)
+		err = core.SaveSkToPemFile(eligiblePrivKeysFile, pkHex, skHex)
 		if err != nil {
 			return err
 		}
