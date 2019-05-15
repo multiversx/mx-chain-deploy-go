@@ -34,7 +34,7 @@ VERSION:
 	numAddressesWithBalances = cli.IntFlag{
 		Name:  "num-addresses-with-balances",
 		Usage: "Number of addresses, private/public keys, with balances to generate",
-		Value: 3,
+		Value: 21,
 	}
 	mintValue = cli.Uint64Flag{
 		Name:  "mint-value",
@@ -148,21 +148,25 @@ func generateFiles(ctx *cli.Context) error {
 		}
 	}()
 
+	os.Remove(initialBalancesSkFileName)
 	initialBalancesSkFile, err = os.OpenFile(initialBalancesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
 
+	os.Remove(initialNodesSkFileName)
 	initialNodesSkFile, err = os.OpenFile(initialNodesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
 
+	os.Remove(genesisFilename)
 	genesisFile, err = os.OpenFile(genesisFilename, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
 
+	os.Remove(nodesSetupFilename)
 	nodesFile, err = os.OpenFile(nodesSetupFilename, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
