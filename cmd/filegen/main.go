@@ -122,6 +122,8 @@ func generateFiles(ctx *cli.Context) error {
 		return errInvalidMintValue
 	}
 
+	consensusType := ctx.GlobalString(consensusType.Name)
+
 	var err error
 	var initialBalancesSkFile, initialNodesSkFile, genesisFile, nodesFile *os.File
 	var pkHex string
@@ -217,7 +219,7 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
-	switch consensusType.Value {
+	switch consensusType {
 	case "bls":
 		suite = kyber.NewSuitePairingBn256()
 	case "bn":
