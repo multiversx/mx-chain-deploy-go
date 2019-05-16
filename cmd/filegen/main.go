@@ -31,9 +31,9 @@ VERSION:
    {{.Version}}
    {{end}}
 `
-	numPairs = cli.IntFlag{
-		Name:  "num-pairs",
-		Usage: "Number of private/public keys to generate",
+	numAddressesWithBalances = cli.IntFlag{
+		Name:  "num-addresses-with-balances",
+		Usage: "Number of addresses, private/public keys, with balances to generate",
 		Value: 21,
 	}
 	mintValue = cli.Uint64Flag{
@@ -41,13 +41,34 @@ VERSION:
 		Usage: "Initial minting for all public keys generated",
 		Value: 1000000000,
 	}
+	numNodes = cli.IntFlag{
+		Name:  "num-nodes",
+		Usage: "Number of initial nodes from shards and metachain, private/public keys, to generate",
+		Value: 21,
+	}
 
-	privKeysFilename = "./privkeys.pem"
-	blsPrivKeysFileName = "./blsPrivateKeys.pem"
-	genesisFilename  = "./genesis.json"
+	numMetachainNodes = cli.IntFlag{
+		Name:  "num-metachain-nodes",
+		Usage: "Number of initial metachain nodes, private/public keys, to generate",
+		Value: 1,
+	}
+
+	consensusType = cli.StringFlag{
+		Name:  "consensus-type",
+		Usage: "Consensus type to be used and for which, private/public keys, to generate",
+		Value: "bls",
+	}
+
+	initialBalancesSkFileName      = "./initialBalancesSk.pem"
+	initialBalancesSkPlainFileName = "./initialBalancesSkPlain.txt"
+	initialNodesSkFileName         = "./initialNodesSk.pem"
+	initialNodesSkPlainFileName    = "./initialNodesSkPlain.txt"
+	genesisFilename                = "./genesis.json"
+	nodesSetupFilename             = "./nodesSetup.json"
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
+ 	errInvalidNumberOfNodes  = errors.New("number of total nodes should be greater than number of metachain nodes")
 )
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
@@ -61,8 +82,9 @@ func main() {
 	cli.AppHelpTemplate = fileGenHelpTemplate
 	app.Name = "Deploy Preparation Tool"
 	app.Version = "v0.0.1"
-	app.Usage = "This binary will generate a privkeys.pem and genesis.json files to be used in mass deployment"
-	app.Flags = []cli.Flag{numPairs, mintValue}
+	app.Usage = "This binary will generate a initialBalancesSk.pem, initialNodesSk.pem, genesis.json and nodesSetup.json" +
+		" files, to be used in mass deployment"
+	app.Flags = []cli.Flag{numAddressesWithBalances, mintValue, numNodes, numMetachainNodes, consensusType}
 	app.Authors = []cli.Author{
 		{
 			Name:  "The Elrond Team",
@@ -81,27 +103,39 @@ func main() {
 	}
 }
 
-func getIdentifierAndPrivateKey(blsGenerator crypto.KeyGenerator) (string, []byte, error) {
-	blsSk, blsPk := blsGenerator.GeneratePair()
-	blsSkBytes, err := blsSk.ToByteArray()
+func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator) (string, []byte, error) {
+	sk, pk := keyGen.GeneratePair()
+	skBytes, err := sk.ToByteArray()
 	if err != nil {
 		return "", nil, err
 	}
 
-	blsPkBytes, err := blsPk.ToByteArray()
+	pkBytes, err := pk.ToByteArray()
 	if err != nil {
 		return "", nil, err
 	}
 
-	blsSkHex := []byte(hex.EncodeToString(blsSkBytes))
-	blsPkHex := hex.EncodeToString(blsPkBytes)
-	return blsPkHex, blsSkHex, nil
+	skHex := []byte(hex.EncodeToString(skBytes))
+	pkHex := hex.EncodeToString(pkBytes)
+	return pkHex, skHex, nil
 }
 
 func generateFiles(ctx *cli.Context) error {
-	num := ctx.GlobalInt(numPairs.Name)
-	if num < 1 {
+	numAddressesWithBalances := ctx.GlobalInt(numAddressesWithBalances.Name)
+	numNodes := ctx.GlobalInt(numNodes.Name)
+	numMetachainNodes := ctx.GlobalInt(numMetachainNodes.Name)
+
+	if numAddressesWithBalances < 1 || numNodes < 1 || numMetachainNodes < 0 {
 		return errInvalidNumPrivPubKeys
+	}
+
+	if numMetachainNodes >= numNodes {
+		return errInvalidNumberOfNodes
+	}
+
+	metaChainActive := true
+	if numMetachainNodes == 0 {
+		metaChainActive = false
 	}
 
 	initialMint := ctx.GlobalUint64(mintValue.Name)
@@ -109,15 +143,29 @@ func generateFiles(ctx *cli.Context) error {
 		return errInvalidMintValue
 	}
 
+	consensusType := ctx.GlobalString(consensusType.Name)
+
 	var err error
-	var privKeysFile, blsPrivKeysFile, genesisFile *os.File
+	var initialBalancesSkFile, initialBalancesSkPlainFile, initialNodesSkFile, initialNodesSkPlainFile, genesisFile, nodesFile *os.File
+	var pkHex string
+	var skHex []byte
+	var suite crypto.Suite
+	var generator crypto.KeyGenerator
 
 	defer func() {
-		err = privKeysFile.Close()
+		err = initialBalancesSkFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		err = blsPrivKeysFile.Close()
+		err = initialBalancesSkPlainFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		err = initialNodesSkFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		err = initialNodesSkPlainFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -125,16 +173,55 @@ func generateFiles(ctx *cli.Context) error {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		err = nodesFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}()
 
-	privKeysFile, err = os.OpenFile(privKeysFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	err = os.Remove(initialBalancesSkFileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	initialBalancesSkFile, err = os.OpenFile(initialBalancesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
 
-	blsPrivKeysFile, err = os.OpenFile(blsPrivKeysFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	err = os.Remove(initialBalancesSkPlainFileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	initialBalancesSkPlainFile, err = os.OpenFile(initialBalancesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
+	}
+
+	err = os.Remove(initialNodesSkFileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	initialNodesSkFile, err = os.OpenFile(initialNodesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(initialNodesSkPlainFileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	initialNodesSkPlainFile, err = os.OpenFile(initialNodesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(genesisFilename)
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	genesisFile, err = os.OpenFile(genesisFilename, os.O_CREATE|os.O_WRONLY, 0666)
@@ -142,45 +229,51 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
-	genesis := &sharding.Genesis{
-		StartTime:                   0,
-		RoundDuration:               6000,
-		ConsensusGroupSize:          uint32(num),
-		MinNodesPerShard:            uint32(num),
-		InitialNodes:                make([]*sharding.InitialNode, num),
-		MetaChainActive:             true,
-		MetaChainConsensusGroupSize: 1,
-		MetaChainMinNodes:           1,
+	err = os.Remove(nodesSetupFilename)
+	if err != nil {
+		fmt.Println(err)
 	}
 
-	suite := kyber.NewBlakeSHA256Ed25519()
-	generator := signing.NewKeyGenerator(suite)
+	nodesFile, err = os.OpenFile(nodesSetupFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
 
-	blsSuite := kyber.NewSuitePairingBn256()
-	blsGenerator := signing.NewKeyGenerator(blsSuite)
+	genesis := &sharding.Genesis{
+		InitialBalances: make([]*sharding.InitialBalance, numAddressesWithBalances),
+	}
 
-	for i := 0; i < num; i++ {
-		pkHex, skHex, err := getIdentifierAndPrivateKey(generator)
+	nodes := &sharding.NodesSetup{
+		StartTime:                   0,
+		RoundDuration:               6000,
+		ConsensusGroupSize:          uint32(numNodes - numMetachainNodes),
+		MinNodesPerShard:            uint32(numNodes - numMetachainNodes),
+		InitialNodes:                make([]*sharding.InitialNode, numNodes),
+		MetaChainActive:             metaChainActive,
+		MetaChainConsensusGroupSize: uint32(numMetachainNodes),
+		MetaChainMinNodes:           uint32(numMetachainNodes),
+	}
+
+	suite = kyber.NewBlakeSHA256Ed25519()
+	generator = signing.NewKeyGenerator(suite)
+
+	for i := 0; i < numAddressesWithBalances; i++ {
+		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
 		if err != nil {
 			return err
 		}
 
-		genesis.InitialNodes[i] = &sharding.InitialNode{
+		genesis.InitialBalances[i] = &sharding.InitialBalance{
 			PubKey:  pkHex,
 			Balance: fmt.Sprintf("%d", initialMint),
 		}
 
-		err = core.SaveSkToPemFile(privKeysFile, pkHex, skHex)
+		err = core.SaveSkToPemFile(initialBalancesSkFile, pkHex, skHex)
 		if err != nil {
 			return err
 		}
 
-		blsPkHex, blsSkHex, err := getIdentifierAndPrivateKey(blsGenerator)
-		if err != nil {
-			return err
-		}
-
-		err = core.SaveSkToPemFile(blsPrivKeysFile, blsPkHex, blsSkHex)
+		_, err = initialBalancesSkPlainFile.Write(append(skHex, '\n'))
 		if err != nil {
 			return err
 		}
@@ -192,6 +285,50 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	_, err = genesisFile.Write(genesisBuff)
+	if err != nil {
+		return err
+	}
+
+	// TODO: A factory which returns the suite according to consensus type should be created in elrond-go-sandbox project
+	// Ex: crypto.NewSuite(consensusType) crypto.Suite
+	switch consensusType {
+	case "bls":
+		suite = kyber.NewSuitePairingBn256()
+	case "bn":
+		suite = kyber.NewBlakeSHA256Ed25519()
+	default:
+		suite = nil
+	}
+
+	generator = signing.NewKeyGenerator(suite)
+
+	for i := 0; i < numNodes; i++ {
+		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
+		if err != nil {
+			return err
+		}
+
+		nodes.InitialNodes[i] = &sharding.InitialNode{
+			PubKey: pkHex,
+		}
+
+		err = core.SaveSkToPemFile(initialNodesSkFile, pkHex, skHex)
+		if err != nil {
+			return err
+		}
+
+		_, err = initialNodesSkPlainFile.Write(append(skHex, '\n'))
+		if err != nil {
+			return err
+		}
+	}
+
+	nodesBuff, err := json.MarshalIndent(nodes, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	_, err = nodesFile.Write(nodesBuff)
 	if err != nil {
 		return err
 	}
