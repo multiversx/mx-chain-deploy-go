@@ -15,16 +15,9 @@ Run in  %project_folder%/cmd/filegen folder the following command to build a fil
  
  ```
  $ go build
- $ ./filegen
+$ ./filegen -num-addresses-with-balances 21 -mint-value 1000000000 -num-nodes 21 -num-metachain-nodes 1 -consensus-type "bls"
  ```
  
-Run in  %project_folder%/cmd/filegen folder the following command to build a filegen:
-
-```
-$ go build
-$ ./filegen -num-addresses-with-balances 21 -mint-value 1000000000 -num-nodes 21 -num-metachain-nodes 1 -consensus-type "bls"
-```
-
 ### Running the tests
 ```
 $ go test ./...
