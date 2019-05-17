@@ -180,8 +180,8 @@ func generateFiles(ctx *cli.Context) error {
 	}()
 
 	err = os.Remove(initialBalancesSkFileName)
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	initialBalancesSkFile, err = os.OpenFile(initialBalancesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
@@ -190,8 +190,8 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	err = os.Remove(initialBalancesSkPlainFileName)
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	initialBalancesSkPlainFile, err = os.OpenFile(initialBalancesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
@@ -200,8 +200,8 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	err = os.Remove(initialNodesSkFileName)
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	initialNodesSkFile, err = os.OpenFile(initialNodesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
@@ -210,8 +210,8 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	err = os.Remove(initialNodesSkPlainFileName)
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	initialNodesSkPlainFile, err = os.OpenFile(initialNodesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
@@ -220,8 +220,8 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	err = os.Remove(genesisFilename)
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	genesisFile, err = os.OpenFile(genesisFilename, os.O_CREATE|os.O_WRONLY, 0666)
@@ -230,8 +230,8 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	err = os.Remove(nodesSetupFilename)
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	nodesFile, err = os.OpenFile(nodesSetupFilename, os.O_CREATE|os.O_WRONLY, 0666)
