@@ -97,8 +97,6 @@ VERSION:
 	errInvalidNumberOfNodes  = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 )
 
-//const maxDifferentValuesHoldInOneByte = 256
-
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
 // Those files are used to mass-deploy nodes and thus, ensuring that all nodes have the same data to work with
 // The 2 optional flags are used to specify how many private/public keys to generate and the initial minting for each
