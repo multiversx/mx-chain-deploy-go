@@ -32,27 +32,50 @@ VERSION:
    {{end}}
 `
 	numAddressesWithBalances = cli.IntFlag{
-		Name:  "num-addresses-with-balances",
+		Name:  "num-of-addresses-with-balances",
 		Usage: "Number of addresses, private/public keys, with balances to generate",
-		Value: 21,
+		Value: 132,
 	}
 	mintValue = cli.Uint64Flag{
 		Name:  "mint-value",
 		Usage: "Initial minting for all public keys generated",
 		Value: 1000000000,
 	}
-	numNodes = cli.IntFlag{
-		Name:  "num-nodes",
-		Usage: "Number of initial nodes from shards and metachain, private/public keys, to generate",
+	numOfShards = cli.IntFlag{
+		Name:  "num-of-shards",
+		Usage: "Number of initial shards",
+		Value: 5,
+	}
+	numOfNodesPerShard = cli.IntFlag{
+		Name:  "num-of-nodes-in-each-shard",
+		Usage: "Number of initial nodes in each shard, private/public keys, to generate",
 		Value: 21,
 	}
-
-	numMetachainNodes = cli.IntFlag{
-		Name:  "num-metachain-nodes",
-		Usage: "Number of initial metachain nodes, private/public keys, to generate",
+	consensusGroupSize = cli.IntFlag{
+		Name:  "consensus-group-size",
+		Usage: "Consensus group size",
+		Value: 15,
+	}
+	numOfObserversPerShard = cli.IntFlag{
+		Name:  "num-of-observers-in-each-shard",
+		Usage: "Number of initial observers in each shard, private/public keys, to generate",
 		Value: 1,
 	}
-
+	numOfMetachainNodes = cli.IntFlag{
+		Name:  "num-of-metachain-nodes",
+		Usage: "Number of initial metachain nodes, private/public keys, to generate",
+		Value: 21,
+	}
+	metachainConsensusGroupSize = cli.IntFlag{
+		Name:  "metachain-consensus-group-size",
+		Usage: "Metachain consensus group size",
+		Value: 15,
+	}
+	numOfMetachainObservers = cli.IntFlag{
+		Name:  "num-of-observers-in-metachain",
+		Usage: "Number of initial metachain observers, private/public keys, to generate",
+		Value: 1,
+	}
 	consensusType = cli.StringFlag{
 		Name:  "consensus-type",
 		Usage: "Consensus type to be used and for which, private/public keys, to generate",
@@ -61,15 +84,19 @@ VERSION:
 
 	initialBalancesSkFileName      = "./initialBalancesSk.pem"
 	initialBalancesSkPlainFileName = "./initialBalancesSkPlain.txt"
+	initialBalancesPkPlainFileName = "./initialBalancesPkPlain.txt"
 	initialNodesSkFileName         = "./initialNodesSk.pem"
 	initialNodesSkPlainFileName    = "./initialNodesSkPlain.txt"
+	initialNodesPkPlainFileName    = "./initialNodesPkPlain.txt"
 	genesisFilename                = "./genesis.json"
 	nodesSetupFilename             = "./nodesSetup.json"
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
- 	errInvalidNumberOfNodes  = errors.New("number of total nodes should be greater than number of metachain nodes")
+	errInvalidNumberOfNodes  = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 )
+
+const maxDifferentValuesHoldInOneByte = 256
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
 // Those files are used to mass-deploy nodes and thus, ensuring that all nodes have the same data to work with
@@ -84,7 +111,17 @@ func main() {
 	app.Version = "v0.0.1"
 	app.Usage = "This binary will generate a initialBalancesSk.pem, initialNodesSk.pem, genesis.json and nodesSetup.json" +
 		" files, to be used in mass deployment"
-	app.Flags = []cli.Flag{numAddressesWithBalances, mintValue, numNodes, numMetachainNodes, consensusType}
+	app.Flags = []cli.Flag{
+		numAddressesWithBalances,
+		mintValue,
+		numOfShards,
+		numOfNodesPerShard,
+		consensusGroupSize,
+		numOfObserversPerShard,
+		numOfMetachainNodes,
+		metachainConsensusGroupSize,
+		numOfMetachainObservers,
+		consensusType}
 	app.Authors = []cli.Author{
 		{
 			Name:  "The Elrond Team",
@@ -121,21 +158,35 @@ func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator) (string, []byte, err
 }
 
 func generateFiles(ctx *cli.Context) error {
-	numAddressesWithBalances := ctx.GlobalInt(numAddressesWithBalances.Name)
-	numNodes := ctx.GlobalInt(numNodes.Name)
-	numMetachainNodes := ctx.GlobalInt(numMetachainNodes.Name)
+	numOfShards := ctx.GlobalInt(numOfShards.Name)
+	numOfNodesPerShard := ctx.GlobalInt(numOfNodesPerShard.Name)
+	consensusGroupSize := ctx.GlobalInt(consensusGroupSize.Name)
+	numOfObserversPerShard := ctx.GlobalInt(numOfObserversPerShard.Name)
+	numOfMetachainNodes := ctx.GlobalInt(numOfMetachainNodes.Name)
+	metachainConsensusGroupSize := ctx.GlobalInt(metachainConsensusGroupSize.Name)
+	numOfMetachainObservers := ctx.GlobalInt(numOfMetachainObservers.Name)
 
-	if numAddressesWithBalances < 1 || numNodes < 1 || numMetachainNodes < 0 {
+	var totalAddressesWithBalances int
+	if ctx.GlobalIsSet(numAddressesWithBalances.Name) {
+		totalAddressesWithBalances = ctx.GlobalInt(numAddressesWithBalances.Name)
+	} else {
+		totalAddressesWithBalances = numOfShards*(numOfNodesPerShard+numOfObserversPerShard) + numOfMetachainNodes + numOfMetachainObservers
+	}
+
+	totalNumOfNodes := numOfShards*numOfNodesPerShard+numOfMetachainNodes
+
+	if totalAddressesWithBalances < 1 ||
+		numOfShards < 1 ||
+		numOfNodesPerShard < 1 ||
+		numOfMetachainNodes < 1 {
 		return errInvalidNumPrivPubKeys
 	}
 
-	if numMetachainNodes >= numNodes {
+	if consensusGroupSize < 1 ||
+		consensusGroupSize > numOfNodesPerShard ||
+		metachainConsensusGroupSize < 1 ||
+		metachainConsensusGroupSize > numOfMetachainNodes {
 		return errInvalidNumberOfNodes
-	}
-
-	metaChainActive := true
-	if numMetachainNodes == 0 {
-		metaChainActive = false
 	}
 
 	initialMint := ctx.GlobalUint64(mintValue.Name)
@@ -146,7 +197,14 @@ func generateFiles(ctx *cli.Context) error {
 	consensusType := ctx.GlobalString(consensusType.Name)
 
 	var err error
-	var initialBalancesSkFile, initialBalancesSkPlainFile, initialNodesSkFile, initialNodesSkPlainFile, genesisFile, nodesFile *os.File
+	var initialBalancesSkFile,
+	initialBalancesSkPlainFile,
+	initialBalancesPkPlainFile,
+	initialNodesSkFile,
+	initialNodesSkPlainFile,
+	initialNodesPkPlainFile,
+	genesisFile,
+	nodesFile *os.File
 	var pkHex string
 	var skHex []byte
 	var suite crypto.Suite
@@ -161,11 +219,19 @@ func generateFiles(ctx *cli.Context) error {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		err = initialBalancesPkPlainFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		err = initialNodesSkFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 		err = initialNodesSkPlainFile.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		err = initialNodesPkPlainFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -199,6 +265,16 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
+	err = os.Remove(initialBalancesPkPlainFileName)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	initialBalancesPkPlainFile, err = os.OpenFile(initialBalancesPkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+
 	err = os.Remove(initialNodesSkFileName)
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -215,6 +291,16 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	initialNodesSkPlainFile, err = os.OpenFile(initialNodesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(initialNodesPkPlainFileName)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	initialNodesPkPlainFile, err = os.OpenFile(initialNodesPkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -240,27 +326,54 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	genesis := &sharding.Genesis{
-		InitialBalances: make([]*sharding.InitialBalance, numAddressesWithBalances),
+		InitialBalances: make([]*sharding.InitialBalance, totalAddressesWithBalances),
 	}
 
 	nodes := &sharding.NodesSetup{
 		StartTime:                   0,
-		RoundDuration:               6000,
-		ConsensusGroupSize:          uint32(numNodes - numMetachainNodes),
-		MinNodesPerShard:            uint32(numNodes - numMetachainNodes),
-		InitialNodes:                make([]*sharding.InitialNode, numNodes),
-		MetaChainActive:             metaChainActive,
-		MetaChainConsensusGroupSize: uint32(numMetachainNodes),
-		MetaChainMinNodes:           uint32(numMetachainNodes),
+		RoundDuration:               4000,
+		ConsensusGroupSize:          uint32(consensusGroupSize),
+		MinNodesPerShard:            uint32(numOfNodesPerShard),
+		MetaChainActive:             true,
+		MetaChainConsensusGroupSize: uint32(metachainConsensusGroupSize),
+		MetaChainMinNodes:           uint32(numOfMetachainNodes),
+		InitialNodes:                make([]*sharding.InitialNode, totalNumOfNodes),
 	}
 
 	suite = kyber.NewBlakeSHA256Ed25519()
 	generator = signing.NewKeyGenerator(suite)
 
-	for i := 0; i < numAddressesWithBalances; i++ {
+	value := 1
+	for value <= maxDifferentValuesHoldInOneByte {
+		value <<= 1
+		if value >= numOfShards {
+			value--
+			break
+		}
+	}
+	shardMask := byte(value)
+
+	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards * numOfObserversPerShard
+
+	for i := 0; i < totalAddressesWithBalances; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
 		if err != nil {
 			return err
+		}
+
+		if i >= shardsObserversStartIndex {
+			shardId := (i - shardsObserversStartIndex) / numOfObserversPerShard
+			pk, _ := hex.DecodeString(pkHex)
+			lastPkByte := pk[len(pk)-1] & shardMask
+			for lastPkByte != byte(shardId) {
+				pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
+				if err != nil {
+					return err
+				}
+
+				pk, _ := hex.DecodeString(pkHex)
+				lastPkByte = pk[len(pk)-1] & shardMask
+			}
 		}
 
 		genesis.InitialBalances[i] = &sharding.InitialBalance{
@@ -274,6 +387,11 @@ func generateFiles(ctx *cli.Context) error {
 		}
 
 		_, err = initialBalancesSkPlainFile.Write(append(skHex, '\n'))
+		if err != nil {
+			return err
+		}
+
+		_, err = initialBalancesPkPlainFile.Write(append([]byte(pkHex), '\n'))
 		if err != nil {
 			return err
 		}
@@ -302,7 +420,7 @@ func generateFiles(ctx *cli.Context) error {
 
 	generator = signing.NewKeyGenerator(suite)
 
-	for i := 0; i < numNodes; i++ {
+	for i := 0; i < totalNumOfNodes; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
 		if err != nil {
 			return err
@@ -318,6 +436,11 @@ func generateFiles(ctx *cli.Context) error {
 		}
 
 		_, err = initialNodesSkPlainFile.Write(append(skHex, '\n'))
+		if err != nil {
+			return err
+		}
+
+		_, err = initialNodesPkPlainFile.Write(append([]byte(pkHex), '\n'))
 		if err != nil {
 			return err
 		}
