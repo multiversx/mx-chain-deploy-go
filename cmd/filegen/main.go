@@ -11,9 +11,9 @@ import (
 	"github.com/ElrondNetwork/elrond-go-sandbox/core"
 	"github.com/ElrondNetwork/elrond-go-sandbox/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go-sandbox/crypto/signing/kyber"
+	"github.com/ElrondNetwork/elrond-go-sandbox/data/state"
 	"github.com/ElrondNetwork/elrond-go-sandbox/sharding"
 	"github.com/urfave/cli"
-	"github.com/ElrondNetwork/elrond-go-sandbox/data/state"
 )
 
 var (
@@ -172,7 +172,7 @@ func generateFiles(ctx *cli.Context) error {
 		totalAddressesWithBalances = numOfShards*(numOfNodesPerShard+numOfObserversPerShard) + numOfMetachainNodes + numOfMetachainObservers
 	}
 
-	totalNumOfNodes := numOfShards*numOfNodesPerShard+numOfMetachainNodes
+	totalNumOfNodes := numOfShards*numOfNodesPerShard + numOfMetachainNodes
 
 	if totalAddressesWithBalances < 1 ||
 		numOfShards < 1 ||
@@ -183,8 +183,10 @@ func generateFiles(ctx *cli.Context) error {
 
 	if consensusGroupSize < 1 ||
 		consensusGroupSize > numOfNodesPerShard ||
+		numOfObserversPerShard < 0 ||
 		metachainConsensusGroupSize < 1 ||
-		metachainConsensusGroupSize > numOfMetachainNodes {
+		metachainConsensusGroupSize > numOfMetachainNodes ||
+		numOfMetachainObservers < 0 {
 		return errInvalidNumberOfNodes
 	}
 
@@ -197,13 +199,13 @@ func generateFiles(ctx *cli.Context) error {
 
 	var err error
 	var initialBalancesSkFile,
-	initialBalancesSkPlainFile,
-	initialBalancesPkPlainFile,
-	initialNodesSkFile,
-	initialNodesSkPlainFile,
-	initialNodesPkPlainFile,
-	genesisFile,
-	nodesFile *os.File
+		initialBalancesSkPlainFile,
+		initialBalancesPkPlainFile,
+		initialNodesSkFile,
+		initialNodesSkPlainFile,
+		initialNodesPkPlainFile,
+		genesisFile,
+		nodesFile *os.File
 	var pkHex string
 	var skHex []byte
 	var suite crypto.Suite
@@ -342,7 +344,7 @@ func generateFiles(ctx *cli.Context) error {
 	suite = kyber.NewBlakeSHA256Ed25519()
 	generator = signing.NewKeyGenerator(suite)
 
-	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards * numOfObserversPerShard
+	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards*numOfObserversPerShard
 
 	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShards), 0)
 	if err != nil {
