@@ -13,6 +13,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go-sandbox/crypto/signing/kyber"
 	"github.com/ElrondNetwork/elrond-go-sandbox/sharding"
 	"github.com/urfave/cli"
+	"github.com/ElrondNetwork/elrond-go-sandbox/data/state"
 )
 
 var (
@@ -96,7 +97,7 @@ VERSION:
 	errInvalidNumberOfNodes  = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 )
 
-const maxDifferentValuesHoldInOneByte = 256
+//const maxDifferentValuesHoldInOneByte = 256
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
 // Those files are used to mass-deploy nodes and thus, ensuring that all nodes have the same data to work with
@@ -343,17 +344,12 @@ func generateFiles(ctx *cli.Context) error {
 	suite = kyber.NewBlakeSHA256Ed25519()
 	generator = signing.NewKeyGenerator(suite)
 
-	value := 1
-	for value <= maxDifferentValuesHoldInOneByte {
-		value <<= 1
-		if value >= numOfShards {
-			value--
-			break
-		}
-	}
-	shardMask := byte(value)
-
 	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards * numOfObserversPerShard
+
+	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShards), 0)
+	if err != nil {
+		return err
+	}
 
 	for i := 0; i < totalAddressesWithBalances; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
@@ -362,17 +358,15 @@ func generateFiles(ctx *cli.Context) error {
 		}
 
 		if i >= shardsObserversStartIndex {
-			shardId := (i - shardsObserversStartIndex) / numOfObserversPerShard
+			shardId := uint32((i - shardsObserversStartIndex) / numOfObserversPerShard)
 			pk, _ := hex.DecodeString(pkHex)
-			lastPkByte := pk[len(pk)-1] & shardMask
-			for lastPkByte != byte(shardId) {
+			for shardCoordinator.ComputeId(state.NewAddress(pk)) != shardId {
 				pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
 				if err != nil {
 					return err
 				}
 
-				pk, _ := hex.DecodeString(pkHex)
-				lastPkByte = pk[len(pk)-1] & shardMask
+				pk, _ = hex.DecodeString(pkHex)
 			}
 		}
 
