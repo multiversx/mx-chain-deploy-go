@@ -101,8 +101,6 @@ VERSION:
 // Those files are used to mass-deploy nodes and thus, ensuring that all nodes have the same data to work with
 // The 2 optional flags are used to specify how many private/public keys to generate and the initial minting for each
 // public generated key
-//TODO this should be refactor when genesis.json will hold only minting addresses
-// and it will be a new config file for initial nodes (public keys list)
 func main() {
 	app := cli.NewApp()
 	cli.AppHelpTemplate = fileGenHelpTemplate
