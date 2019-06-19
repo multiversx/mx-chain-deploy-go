@@ -94,7 +94,7 @@ VERSION:
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
-	errInvalidNumberOfNodes  = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
+	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 )
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
@@ -174,20 +174,22 @@ func generateFiles(ctx *cli.Context) error {
 
 	totalNumOfNodes := numOfShards*numOfNodesPerShard + numOfMetachainNodes
 
-	if totalAddressesWithBalances < 1 ||
+	invalidNumPrivPubKey := totalAddressesWithBalances < 1 ||
 		numOfShards < 1 ||
 		numOfNodesPerShard < 1 ||
-		numOfMetachainNodes < 1 {
+		numOfMetachainNodes < 1
+	if invalidNumPrivPubKey {
 		return errInvalidNumPrivPubKeys
 	}
 
-	if consensusGroupSize < 1 ||
+	invalidNumOfNodes := consensusGroupSize < 1 ||
 		consensusGroupSize > numOfNodesPerShard ||
 		numOfObserversPerShard < 0 ||
 		metachainConsensusGroupSize < 1 ||
 		metachainConsensusGroupSize > numOfMetachainNodes ||
-		numOfMetachainObservers < 0 {
-		return errInvalidNumberOfNodes
+		numOfMetachainObservers < 0
+	if invalidNumOfNodes {
+		return errInvalidNumOfNodes
 	}
 
 	initialMint := ctx.GlobalUint64(mintValue.Name)
@@ -197,19 +199,21 @@ func generateFiles(ctx *cli.Context) error {
 
 	consensusType := ctx.GlobalString(consensusType.Name)
 
-	var err error
-	var initialBalancesSkFile,
-		initialBalancesSkPlainFile,
-		initialBalancesPkPlainFile,
-		initialNodesSkFile,
-		initialNodesSkPlainFile,
-		initialNodesPkPlainFile,
-		genesisFile,
+	var (
+		err error
+		initialBalancesSkFile *os.File
+		initialBalancesSkPlainFile *os.File
+		initialBalancesPkPlainFile *os.File
+		initialNodesSkFile *os.File
+		initialNodesSkPlainFile *os.File
+		initialNodesPkPlainFile *os.File
+		genesisFile *os.File
 		nodesFile *os.File
-	var pkHex string
-	var skHex []byte
-	var suite crypto.Suite
-	var generator crypto.KeyGenerator
+		pkHex string
+		skHex []byte
+		suite crypto.Suite
+		generator crypto.KeyGenerator
+	)
 
 	defer func() {
 		err = initialBalancesSkFile.Close()
