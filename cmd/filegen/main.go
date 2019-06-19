@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ElrondNetwork/elrond-go-sandbox/crypto"
 	"os"
 
-	"github.com/ElrondNetwork/elrond-go-sandbox/core"
-	"github.com/ElrondNetwork/elrond-go-sandbox/crypto/signing"
-	"github.com/ElrondNetwork/elrond-go-sandbox/crypto/signing/kyber"
-	"github.com/ElrondNetwork/elrond-go-sandbox/data/state"
-	"github.com/ElrondNetwork/elrond-go-sandbox/sharding"
+	"github.com/ElrondNetwork/elrond-go/core"
+	"github.com/ElrondNetwork/elrond-go/crypto"
+	"github.com/ElrondNetwork/elrond-go/crypto/signing"
+	"github.com/ElrondNetwork/elrond-go/crypto/signing/kyber"
+	"github.com/ElrondNetwork/elrond-go/data/state"
+	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
 )
 
@@ -200,19 +200,19 @@ func generateFiles(ctx *cli.Context) error {
 	consensusType := ctx.GlobalString(consensusType.Name)
 
 	var (
-		err error
-		initialBalancesSkFile *os.File
+		err                        error
+		initialBalancesSkFile      *os.File
 		initialBalancesSkPlainFile *os.File
 		initialBalancesPkPlainFile *os.File
-		initialNodesSkFile *os.File
-		initialNodesSkPlainFile *os.File
-		initialNodesPkPlainFile *os.File
-		genesisFile *os.File
-		nodesFile *os.File
-		pkHex string
-		skHex []byte
-		suite crypto.Suite
-		generator crypto.KeyGenerator
+		initialNodesSkFile         *os.File
+		initialNodesSkPlainFile    *os.File
+		initialNodesPkPlainFile    *os.File
+		genesisFile                *os.File
+		nodesFile                  *os.File
+		pkHex                      string
+		skHex                      []byte
+		suite                      crypto.Suite
+		generator                  crypto.KeyGenerator
 	)
 
 	defer func() {
@@ -405,7 +405,7 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
-	// TODO: A factory which returns the suite according to consensus type should be created in elrond-go-sandbox project
+	// TODO: A factory which returns the suite according to consensus type should be created in elrond-go project
 	// Ex: crypto.NewSuite(consensusType) crypto.Suite
 	switch consensusType {
 	case "bls":
