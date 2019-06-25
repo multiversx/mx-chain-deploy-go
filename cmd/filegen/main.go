@@ -415,15 +415,17 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	generator = signing.NewKeyGenerator(suite)
-
-	for i := 0; i < totalNumOfNodes; i++ {
+	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
+	for i := 0; i < totalNumOfNodes+numObservers; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
 		if err != nil {
 			return err
 		}
 
-		nodes.InitialNodes[i] = &sharding.InitialNode{
-			PubKey: pkHex,
+		if i < totalNumOfNodes {
+			nodes.InitialNodes[i] = &sharding.InitialNode{
+				PubKey: pkHex,
+			}
 		}
 
 		err = core.SaveSkToPemFile(initialNodesSkFile, pkHex, skHex)
