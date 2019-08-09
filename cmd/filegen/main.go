@@ -208,9 +208,11 @@ func generateFiles(ctx *cli.Context) error {
 		genesisFile                *os.File
 		nodesFile                  *os.File
 		pkHex                      string
+		addrPkHex                  string
 		skHex                      []byte
 		suite                      crypto.Suite
-		generator                  crypto.KeyGenerator
+		generatorBalances          crypto.KeyGenerator
+		generatorInitialNodes      crypto.KeyGenerator
 	)
 
 	defer func() {
@@ -344,7 +346,7 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	suite = kyber.NewBlakeSHA256Ed25519()
-	generator = signing.NewKeyGenerator(suite)
+	generatorBalances = signing.NewKeyGenerator(suite)
 
 	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards*numOfObserversPerShard
 
@@ -354,7 +356,7 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	for i := 0; i < totalAddressesWithBalances; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(generatorBalances)
 		if err != nil {
 			return err
 		}
@@ -363,7 +365,7 @@ func generateFiles(ctx *cli.Context) error {
 			shardId := uint32((i - shardsObserversStartIndex) / numOfObserversPerShard)
 			pk, _ := hex.DecodeString(pkHex)
 			for shardCoordinator.ComputeId(state.NewAddress(pk)) != shardId {
-				pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
+				pkHex, skHex, err = getIdentifierAndPrivateKey(generatorBalances)
 				if err != nil {
 					return err
 				}
@@ -414,17 +416,23 @@ func generateFiles(ctx *cli.Context) error {
 		suite = nil
 	}
 
-	generator = signing.NewKeyGenerator(suite)
+	generatorInitialNodes = signing.NewKeyGenerator(suite)
 	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 	for i := 0; i < totalNumOfNodes+numObservers; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(generator)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(generatorInitialNodes)
+		if err != nil {
+			return err
+		}
+
+		addrPkHex, _, err = getIdentifierAndPrivateKey(generatorBalances)
 		if err != nil {
 			return err
 		}
 
 		if i < totalNumOfNodes {
 			nodes.InitialNodes[i] = &sharding.InitialNode{
-				PubKey: pkHex,
+				PubKey:  pkHex,
+				Address: addrPkHex,
 			}
 		}
 
