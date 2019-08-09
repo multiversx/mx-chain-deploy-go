@@ -211,8 +211,8 @@ func generateFiles(ctx *cli.Context) error {
 		addrPkHex                  string
 		skHex                      []byte
 		suite                      crypto.Suite
-		generatorBalances          crypto.KeyGenerator
-		generatorInitialNodes      crypto.KeyGenerator
+		balancesKeyGenerator       crypto.KeyGenerator
+		initialNodesKeyGenerator   crypto.KeyGenerator
 	)
 
 	defer func() {
@@ -346,7 +346,7 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	suite = kyber.NewBlakeSHA256Ed25519()
-	generatorBalances = signing.NewKeyGenerator(suite)
+	balancesKeyGenerator = signing.NewKeyGenerator(suite)
 
 	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards*numOfObserversPerShard
 
@@ -356,7 +356,7 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	for i := 0; i < totalAddressesWithBalances; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(generatorBalances)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
 		if err != nil {
 			return err
 		}
@@ -365,7 +365,7 @@ func generateFiles(ctx *cli.Context) error {
 			shardId := uint32((i - shardsObserversStartIndex) / numOfObserversPerShard)
 			pk, _ := hex.DecodeString(pkHex)
 			for shardCoordinator.ComputeId(state.NewAddress(pk)) != shardId {
-				pkHex, skHex, err = getIdentifierAndPrivateKey(generatorBalances)
+				pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
 				if err != nil {
 					return err
 				}
@@ -416,15 +416,15 @@ func generateFiles(ctx *cli.Context) error {
 		suite = nil
 	}
 
-	generatorInitialNodes = signing.NewKeyGenerator(suite)
+	initialNodesKeyGenerator = signing.NewKeyGenerator(suite)
 	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 	for i := 0; i < totalNumOfNodes+numObservers; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(generatorInitialNodes)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(initialNodesKeyGenerator)
 		if err != nil {
 			return err
 		}
 
-		addrPkHex, _, err = getIdentifierAndPrivateKey(generatorBalances)
+		addrPkHex, _, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
 		if err != nil {
 			return err
 		}
