@@ -14,6 +14,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go/data/state"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
+	"math/big"
 )
 
 var (
@@ -37,10 +38,10 @@ VERSION:
 		Usage: "Number of addresses, private/public keys, with balances to generate",
 		Value: 132,
 	}
-	mintValue = cli.Uint64Flag{
+	mintValue = cli.StringFlag{
 		Name:  "mint-value",
 		Usage: "Initial minting for all public keys generated",
-		Value: 1000000000,
+		Value: "1000000000000000000000000000",
 	}
 	numOfShards = cli.IntFlag{
 		Name:  "num-of-shards",
@@ -190,8 +191,9 @@ func generateFiles(ctx *cli.Context) error {
 		return errInvalidNumOfNodes
 	}
 
-	initialMint := ctx.GlobalUint64(mintValue.Name)
-	if initialMint < 0 {
+	initialMint := new(big.Int)
+	initialMint, ok := initialMint.SetString(ctx.GlobalString(mintValue.Name), 10)
+	if !ok {
 		return errInvalidMintValue
 	}
 
@@ -376,7 +378,7 @@ func generateFiles(ctx *cli.Context) error {
 
 		genesis.InitialBalances[i] = &sharding.InitialBalance{
 			PubKey:  pkHex,
-			Balance: fmt.Sprintf("%d", initialMint),
+			Balance: fmt.Sprintf("%s", initialMint.String()),
 		}
 
 		err = core.SaveSkToPemFile(initialBalancesSkFile, pkHex, skHex)
