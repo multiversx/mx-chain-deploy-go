@@ -392,32 +392,32 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 
+		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(getNodesKeyGen(consensusType))
+		if err != nil {
+			return err
+		}
+
+		err = core.SaveSkToPemFile(initialNodesSkFile, pkHexForNode, skHexForNode)
+		if err != nil {
+			return err
+		}
+
+		_, err = initialNodesSkPlainFile.Write(append(skHex, '\n'))
+		if err != nil {
+			return err
+		}
+
+		_, err = initialNodesPkPlainFile.Write(append([]byte(pkHex), '\n'))
+		if err != nil {
+			return err
+		}
+
 		numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 		if i < totalAddressesWithBalances-numObservers {
-			pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(getNodesKeyGen(consensusType))
-			if err != nil {
-				return err
-			}
-
 			nodes.InitialNodes = append(nodes.InitialNodes, &sharding.InitialNode{
 				PubKey:  pkHexForNode,
 				Address: pkHex,
 			})
-
-			err = core.SaveSkToPemFile(initialNodesSkFile, pkHexForNode, skHexForNode)
-			if err != nil {
-				return err
-			}
-
-			_, err = initialNodesSkPlainFile.Write(append(skHex, '\n'))
-			if err != nil {
-				return err
-			}
-
-			_, err = initialNodesPkPlainFile.Write(append([]byte(pkHex), '\n'))
-			if err != nil {
-				return err
-			}
 		}
 	}
 
