@@ -96,6 +96,7 @@ VERSION:
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
+	errCreatingKeygen        = errors.New("cannot create key gen")
 )
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
@@ -353,6 +354,9 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
+	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
+	numValidators := totalAddressesWithBalances - numObservers
+
 	for i := 0; i < totalAddressesWithBalances; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
 		if err != nil {
@@ -392,7 +396,12 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 
-		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(getNodesKeyGen(consensusType))
+		keyGen := getNodesKeyGen(consensusType)
+		if keyGen == nil {
+			return errCreatingKeygen
+		}
+
+		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(keyGen)
 		if err != nil {
 			return err
 		}
@@ -412,8 +421,7 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 
-		numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
-		if i < totalAddressesWithBalances-numObservers {
+		if i < numValidators {
 			nodes.InitialNodes = append(nodes.InitialNodes, &sharding.InitialNode{
 				PubKey:  pkHexForNode,
 				Address: pkHex,
