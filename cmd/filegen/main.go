@@ -96,6 +96,7 @@ VERSION:
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
+	errCreatingKeygen        = errors.New("cannot create key gen")
 )
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
@@ -171,8 +172,6 @@ func generateFiles(ctx *cli.Context) error {
 		totalAddressesWithBalances = numOfShards*(numOfNodesPerShard+numOfObserversPerShard) + numOfMetachainNodes + numOfMetachainObservers
 	}
 
-	totalNumOfNodes := numOfShards*numOfNodesPerShard + numOfMetachainNodes
-
 	invalidNumPrivPubKey := totalAddressesWithBalances < 1 ||
 		numOfShards < 1 ||
 		numOfNodesPerShard < 1 ||
@@ -210,11 +209,9 @@ func generateFiles(ctx *cli.Context) error {
 		genesisFile                *os.File
 		nodesFile                  *os.File
 		pkHex                      string
-		addrPkHex                  string
 		skHex                      []byte
 		suite                      crypto.Suite
 		balancesKeyGenerator       crypto.KeyGenerator
-		initialNodesKeyGenerator   crypto.KeyGenerator
 	)
 
 	defer func() {
@@ -336,6 +333,7 @@ func generateFiles(ctx *cli.Context) error {
 		InitialBalances: make([]*sharding.InitialBalance, totalAddressesWithBalances),
 	}
 
+	var initialNodes []*sharding.InitialNode
 	nodes := &sharding.NodesSetup{
 		StartTime:                   0,
 		RoundDuration:               4000,
@@ -343,7 +341,7 @@ func generateFiles(ctx *cli.Context) error {
 		MinNodesPerShard:            uint32(numOfNodesPerShard),
 		MetaChainConsensusGroupSize: uint32(metachainConsensusGroupSize),
 		MetaChainMinNodes:           uint32(numOfMetachainNodes),
-		InitialNodes:                make([]*sharding.InitialNode, totalNumOfNodes),
+		InitialNodes:                initialNodes,
 	}
 
 	suite = kyber.NewBlakeSHA256Ed25519()
@@ -355,6 +353,9 @@ func generateFiles(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
+	numValidators := totalAddressesWithBalances - numObservers
 
 	for i := 0; i < totalAddressesWithBalances; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
@@ -394,50 +395,18 @@ func generateFiles(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-	}
 
-	genesisBuff, err := json.MarshalIndent(genesis, "", "  ")
-	if err != nil {
-		return err
-	}
+		keyGen := getNodesKeyGen(consensusType)
+		if keyGen == nil {
+			return errCreatingKeygen
+		}
 
-	_, err = genesisFile.Write(genesisBuff)
-	if err != nil {
-		return err
-	}
-
-	// TODO: A factory which returns the suite according to consensus type should be created in elrond-go project
-	// Ex: crypto.NewSuite(consensusType) crypto.Suite
-	switch consensusType {
-	case "bls":
-		suite = kyber.NewSuitePairingBn256()
-	case "bn":
-		suite = kyber.NewBlakeSHA256Ed25519()
-	default:
-		suite = nil
-	}
-
-	initialNodesKeyGenerator = signing.NewKeyGenerator(suite)
-	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
-	for i := 0; i < totalNumOfNodes+numObservers; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(initialNodesKeyGenerator)
+		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(keyGen)
 		if err != nil {
 			return err
 		}
 
-		addrPkHex, _, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
-		if err != nil {
-			return err
-		}
-
-		if i < totalNumOfNodes {
-			nodes.InitialNodes[i] = &sharding.InitialNode{
-				PubKey:  pkHex,
-				Address: addrPkHex,
-			}
-		}
-
-		err = core.SaveSkToPemFile(initialNodesSkFile, pkHex, skHex)
+		err = core.SaveSkToPemFile(initialNodesSkFile, pkHexForNode, skHexForNode)
 		if err != nil {
 			return err
 		}
@@ -451,6 +420,23 @@ func generateFiles(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
+
+		if i < numValidators {
+			nodes.InitialNodes = append(nodes.InitialNodes, &sharding.InitialNode{
+				PubKey:  pkHexForNode,
+				Address: pkHex,
+			})
+		}
+	}
+
+	genesisBuff, err := json.MarshalIndent(genesis, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	_, err = genesisFile.Write(genesisBuff)
+	if err != nil {
+		return err
 	}
 
 	nodesBuff, err := json.MarshalIndent(nodes, "", "  ")
@@ -478,4 +464,19 @@ func isMintValueValid(mintValue string) error {
 	}
 
 	return nil
+}
+
+func getNodesKeyGen(consensusType string) crypto.KeyGenerator {
+	var suite crypto.Suite
+
+	switch consensusType {
+	case "bls":
+		suite = kyber.NewSuitePairingBn256()
+	case "bn":
+		suite = kyber.NewBlakeSHA256Ed25519()
+	default:
+		suite = nil
+	}
+
+	return signing.NewKeyGenerator(suite)
 }
