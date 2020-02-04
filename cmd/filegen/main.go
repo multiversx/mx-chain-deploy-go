@@ -83,6 +83,11 @@ VERSION:
 		Usage: "Consensus type to be used and for which, private/public keys, to generate",
 		Value: "bls",
 	}
+	chainID = cli.StringFlag{
+		Name:  "chain-id",
+		Usage: "Chain ID flag",
+		Value: "testnet",
+	}
 
 	initialBalancesSkFileName      = "./initialBalancesSk.pem"
 	initialBalancesSkPlainFileName = "./initialBalancesSkPlain.txt"
@@ -120,7 +125,9 @@ func main() {
 		numOfMetachainNodes,
 		metachainConsensusGroupSize,
 		numOfMetachainObservers,
-		consensusType}
+		consensusType,
+		chainID,
+	}
 	app.Authors = []cli.Author{
 		{
 			Name:  "The Elrond Team",
@@ -164,6 +171,7 @@ func generateFiles(ctx *cli.Context) error {
 	numOfMetachainNodes := ctx.GlobalInt(numOfMetachainNodes.Name)
 	metachainConsensusGroupSize := ctx.GlobalInt(metachainConsensusGroupSize.Name)
 	numOfMetachainObservers := ctx.GlobalInt(numOfMetachainObservers.Name)
+	chainID := ctx.GlobalString(chainID.Name)
 
 	var totalAddressesWithBalances int
 	if ctx.GlobalIsSet(numAddressesWithBalances.Name) {
@@ -342,6 +350,7 @@ func generateFiles(ctx *cli.Context) error {
 		MetaChainConsensusGroupSize: uint32(metachainConsensusGroupSize),
 		MetaChainMinNodes:           uint32(numOfMetachainNodes),
 		InitialNodes:                initialNodes,
+		ChainID:                     chainID,
 	}
 
 	suite = kyber.NewBlakeSHA256Ed25519()
