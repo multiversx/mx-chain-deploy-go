@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"time"
 
 	"github.com/ElrondNetwork/elrond-go/core"
 	"github.com/ElrondNetwork/elrond-go/crypto"
@@ -73,6 +74,11 @@ VERSION:
 		Usage: "Metachain consensus group size",
 		Value: 15,
 	}
+	numAdditionalAccountsInGenesis = cli.IntFlag{
+		Name:  "num-aditional-accounts",
+		Usage: "Number of additional accounts which will be added in genesis",
+		Value: 1000,
+	}
 	numOfMetachainObservers = cli.IntFlag{
 		Name:  "num-of-observers-in-metachain",
 		Usage: "Number of initial metachain observers, private/public keys, to generate",
@@ -88,6 +94,10 @@ VERSION:
 		Usage: "Chain ID flag",
 		Value: "testnet",
 	}
+	txgenFile = cli.BoolFlag{
+		Name:  "txgen",
+		Usage: "If set, will generate the accounts.json file needed for txgen",
+	}
 
 	initialBalancesSkFileName      = "./initialBalancesSk.pem"
 	initialBalancesSkPlainFileName = "./initialBalancesSkPlain.txt"
@@ -97,12 +107,22 @@ VERSION:
 	initialNodesPkPlainFileName    = "./initialNodesPkPlain.txt"
 	genesisFilename                = "./genesis.json"
 	nodesSetupFilename             = "./nodesSetup.json"
+	txgenAccountsFileName          = "./accounts.json"
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 	errCreatingKeygen        = errors.New("cannot create key gen")
 )
+
+type txgenAccount struct {
+	PubKey        string   `json:"pubKey"`
+	PrivKey       string   `json:"privKey"`
+	LastNonce     uint64   `json:"lastNonce"`
+	Balance       *big.Int `json:"balance"`
+	TokenBalance  *big.Int `json:"tokenBalance"`
+	CanReuseNonce bool     `json:"canReuseNonce"`
+}
 
 // The resulting binary will be used to generate 2 files: genesis.json and privkeys.pem
 // Those files are used to mass-deploy nodes and thus, ensuring that all nodes have the same data to work with
@@ -125,8 +145,10 @@ func main() {
 		numOfMetachainNodes,
 		metachainConsensusGroupSize,
 		numOfMetachainObservers,
+		numAdditionalAccountsInGenesis,
 		consensusType,
 		chainID,
+		txgenFile,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -164,6 +186,7 @@ func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator) (string, []byte, err
 }
 
 func generateFiles(ctx *cli.Context) error {
+	startTime := time.Now()
 	numOfShards := ctx.GlobalInt(numOfShards.Name)
 	numOfNodesPerShard := ctx.GlobalInt(numOfNodesPerShard.Name)
 	consensusGroupSize := ctx.GlobalInt(consensusGroupSize.Name)
@@ -171,7 +194,9 @@ func generateFiles(ctx *cli.Context) error {
 	numOfMetachainNodes := ctx.GlobalInt(numOfMetachainNodes.Name)
 	metachainConsensusGroupSize := ctx.GlobalInt(metachainConsensusGroupSize.Name)
 	numOfMetachainObservers := ctx.GlobalInt(numOfMetachainObservers.Name)
+	numOfAdditionalAccounts := ctx.GlobalInt(numAdditionalAccountsInGenesis.Name)
 	chainID := ctx.GlobalString(chainID.Name)
+	generateTxgenFile := ctx.IsSet(txgenFile.Name)
 
 	var totalAddressesWithBalances int
 	if ctx.GlobalIsSet(numAddressesWithBalances.Name) {
@@ -216,6 +241,7 @@ func generateFiles(ctx *cli.Context) error {
 		initialNodesPkPlainFile    *os.File
 		genesisFile                *os.File
 		nodesFile                  *os.File
+		txgenAccountsFile          *os.File
 		pkHex                      string
 		skHex                      []byte
 		suite                      crypto.Suite
@@ -337,6 +363,18 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
+	if generateTxgenFile {
+		err = os.Remove(txgenAccountsFileName)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+
+		txgenAccountsFile, err = os.OpenFile(txgenAccountsFileName, os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			return err
+		}
+	}
+
 	genesis := &sharding.Genesis{
 		InitialBalances: make([]*sharding.InitialBalance, totalAddressesWithBalances),
 	}
@@ -353,6 +391,8 @@ func generateFiles(ctx *cli.Context) error {
 		ChainID:                     chainID,
 	}
 
+	txgenAccounts := make(map[uint32][]*txgenAccount)
+
 	suite = kyber.NewBlakeSHA256Ed25519()
 	balancesKeyGenerator = signing.NewKeyGenerator(suite)
 
@@ -365,7 +405,9 @@ func generateFiles(ctx *cli.Context) error {
 
 	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 	numValidators := totalAddressesWithBalances - numObservers
+	mintValueBigInt, _ := big.NewInt(0).SetString(initialMint, 10)
 
+	fmt.Println("started generating...")
 	for i := 0; i < totalAddressesWithBalances; i++ {
 		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
 		if err != nil {
@@ -438,6 +480,32 @@ func generateFiles(ctx *cli.Context) error {
 		}
 	}
 
+	for i := 0; i < numOfAdditionalAccounts; i++ {
+		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
+		if err != nil {
+			return err
+		}
+
+		genesis.InitialBalances = append(genesis.InitialBalances, &sharding.InitialBalance{
+			PubKey:  pkHex,
+			Balance: initialMint,
+		})
+
+		if generateTxgenFile {
+			pkBytes, _ := hex.DecodeString(pkHex)
+			address := state.NewAddress(pkBytes)
+			sId := shardCoordinator.ComputeId(address)
+			txgenAccounts[sId] = append(txgenAccounts[sId], &txgenAccount{
+				PubKey:        pkHex,
+				PrivKey:       string(skHex),
+				LastNonce:     0,
+				Balance:       mintValueBigInt,
+				TokenBalance:  big.NewInt(0),
+				CanReuseNonce: true,
+			})
+		}
+	}
+
 	genesisBuff, err := json.MarshalIndent(genesis, "", "  ")
 	if err != nil {
 		return err
@@ -458,6 +526,19 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
+	if generateTxgenFile {
+		txgenAccountsBuff, err := json.MarshalIndent(txgenAccounts, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		_, err = txgenAccountsFile.Write(txgenAccountsBuff)
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("elapsed time in seconds", time.Since(startTime).Seconds())
 	fmt.Println("Files generated successfully!")
 	return nil
 }
