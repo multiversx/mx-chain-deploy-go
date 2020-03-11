@@ -13,6 +13,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go/crypto"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/kyber"
+	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
 	"github.com/ElrondNetwork/elrond-go/data/state"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
@@ -561,9 +562,7 @@ func getNodesKeyGen(consensusType string) crypto.KeyGenerator {
 
 	switch consensusType {
 	case "bls":
-		suite = kyber.NewSuitePairingBn256()
-	case "bn":
-		suite = kyber.NewBlakeSHA256Ed25519()
+		suite = mcl.NewSuiteBLS12()
 	default:
 		suite = nil
 	}
