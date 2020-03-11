@@ -78,7 +78,7 @@ VERSION:
 	numAdditionalAccountsInGenesis = cli.IntFlag{
 		Name:  "num-aditional-accounts",
 		Usage: "Number of additional accounts which will be added in genesis",
-		Value: 1000,
+		Value: 0,
 	}
 	numOfMetachainObservers = cli.IntFlag{
 		Name:  "num-of-observers-in-metachain",
