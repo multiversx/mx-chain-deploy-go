@@ -198,7 +198,6 @@ func generateFiles(ctx *cli.Context) error {
 		totalAddressesWithBalances = ctx.GlobalInt(numAddressesWithBalances.Name)
 	} else {
 		totalAddressesWithBalances = numOfShards*(numOfNodesPerShard+numOfObserversPerShard) + numOfMetachainNodes + numOfMetachainObservers
-		totalAddressesWithBalances = numOfShards*(numOfNodesPerShard+numOfObserversPerShard) + numOfMetachainNodes + numOfMetachainObservers
 	}
 
 	invalidNumPrivPubKey := totalAddressesWithBalances < 1 ||
