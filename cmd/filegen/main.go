@@ -13,7 +13,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go/crypto"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/kyber"
+	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
 	"github.com/ElrondNetwork/elrond-go/data/state"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
@@ -78,7 +78,7 @@ VERSION:
 	numAdditionalAccountsInGenesis = cli.IntFlag{
 		Name:  "num-aditional-accounts",
 		Usage: "Number of additional accounts which will be added in genesis",
-		Value: 1000,
+		Value: 0,
 	}
 	numOfMetachainObservers = cli.IntFlag{
 		Name:  "num-of-observers-in-metachain",
@@ -551,7 +551,7 @@ func isMintValueValid(mintValue string) error {
 }
 
 func getNodesKeyGen() crypto.KeyGenerator {
-	suite := kyber.NewSuitePairingBn256()
+	suite := mcl.NewSuiteBLS12()
 
 	return signing.NewKeyGenerator(suite)
 }
