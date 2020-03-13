@@ -85,6 +85,15 @@ VERSION:
 		Usage: "Number of initial metachain observers, private/public keys, to generate",
 		Value: 1,
 	}
+	hysteresis = cli.Float64Flag{
+		Name:  "hysteresis",
+		Usage: "Hysteresis value",
+		Value: 0.0,
+	}
+	adaptivity = cli.BoolFlag{
+		Name:  "adaptivity",
+		Usage: "adaptivity value",
+	}
 	consensusType = cli.StringFlag{
 		Name:  "consensus-type",
 		Usage: "Consensus type to be used and for which, private/public keys, to generate",
@@ -147,6 +156,8 @@ func main() {
 		metachainConsensusGroupSize,
 		numOfMetachainObservers,
 		numAdditionalAccountsInGenesis,
+		hysteresis,
+		adaptivity,
 		consensusType,
 		chainID,
 		txgenFile,
@@ -196,6 +207,8 @@ func generateFiles(ctx *cli.Context) error {
 	metachainConsensusGroupSize := ctx.GlobalInt(metachainConsensusGroupSize.Name)
 	numOfMetachainObservers := ctx.GlobalInt(numOfMetachainObservers.Name)
 	numOfAdditionalAccounts := ctx.GlobalInt(numAdditionalAccountsInGenesis.Name)
+	hysteresisValue := ctx.GlobalFloat64(hysteresis.Name)
+	adaptivityValue := ctx.GlobalBool(adaptivity.Name)
 	chainID := ctx.GlobalString(chainID.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
 
@@ -388,8 +401,10 @@ func generateFiles(ctx *cli.Context) error {
 		MinNodesPerShard:            uint32(numOfNodesPerShard),
 		MetaChainConsensusGroupSize: uint32(metachainConsensusGroupSize),
 		MetaChainMinNodes:           uint32(numOfMetachainNodes),
-		InitialNodes:                initialNodes,
+		Hysteresis:                  float32(hysteresisValue),
+		Adaptivity:                  adaptivityValue,
 		ChainID:                     chainID,
+		InitialNodes:                initialNodes,
 	}
 
 	txgenAccounts := make(map[uint32][]*txgenAccount)
