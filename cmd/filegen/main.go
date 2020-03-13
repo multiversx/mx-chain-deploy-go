@@ -86,13 +86,14 @@ VERSION:
 		Value: 1,
 	}
 	hysteresis = cli.Float64Flag{
-		Name:  "hysteresis",
-		Usage: "Hysteresis value",
+		Name: "hysteresis",
+		Usage: "Hysteresis value - multiplied with numOfNodesPerShard to compute number of nodes allowed in the " +
+			"waiting list of each shard",
 		Value: 0.0,
 	}
 	adaptivity = cli.BoolFlag{
 		Name:  "adaptivity",
-		Usage: "adaptivity value",
+		Usage: "Adaptivity value - should be set to true if shard merging and splitting is enabled",
 	}
 	consensusType = cli.StringFlag{
 		Name:  "consensus-type",
