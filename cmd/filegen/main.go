@@ -12,7 +12,7 @@ import (
 	"github.com/ElrondNetwork/elrond-go/core"
 	"github.com/ElrondNetwork/elrond-go/crypto"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/kyber"
+	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
 	"github.com/ElrondNetwork/elrond-go/data/state"
 	"github.com/ElrondNetwork/elrond-go/sharding"
@@ -85,11 +85,6 @@ VERSION:
 		Usage: "Number of initial metachain observers, private/public keys, to generate",
 		Value: 1,
 	}
-	consensusType = cli.StringFlag{
-		Name:  "consensus-type",
-		Usage: "Consensus type to be used and for which, private/public keys, to generate",
-		Value: "bls",
-	}
 	chainID = cli.StringFlag{
 		Name:  "chain-id",
 		Usage: "Chain ID flag",
@@ -147,7 +142,6 @@ func main() {
 		metachainConsensusGroupSize,
 		numOfMetachainObservers,
 		numAdditionalAccountsInGenesis,
-		consensusType,
 		chainID,
 		txgenFile,
 	}
@@ -229,8 +223,6 @@ func generateFiles(ctx *cli.Context) error {
 	if mintErr != nil {
 		return mintErr
 	}
-
-	consensusType := ctx.GlobalString(consensusType.Name)
 
 	var (
 		err                        error
@@ -394,7 +386,7 @@ func generateFiles(ctx *cli.Context) error {
 
 	txgenAccounts := make(map[uint32][]*txgenAccount)
 
-	suite = kyber.NewBlakeSHA256Ed25519()
+	suite = ed25519.NewEd25519()
 	balancesKeyGenerator = signing.NewKeyGenerator(suite)
 
 	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards*numOfObserversPerShard
@@ -448,7 +440,7 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 
-		keyGen := getNodesKeyGen(consensusType)
+		keyGen := getNodesKeyGen()
 		if keyGen == nil {
 			return errCreatingKeygen
 		}
@@ -557,15 +549,8 @@ func isMintValueValid(mintValue string) error {
 	return nil
 }
 
-func getNodesKeyGen(consensusType string) crypto.KeyGenerator {
-	var suite crypto.Suite
-
-	switch consensusType {
-	case "bls":
-		suite = mcl.NewSuiteBLS12()
-	default:
-		suite = nil
-	}
+func getNodesKeyGen() crypto.KeyGenerator {
+	suite := mcl.NewSuiteBLS12()
 
 	return signing.NewKeyGenerator(suite)
 }
