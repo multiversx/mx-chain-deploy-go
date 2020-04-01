@@ -9,12 +9,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/ElrondNetwork/elrond-go/config"
 	"github.com/ElrondNetwork/elrond-go/core"
 	"github.com/ElrondNetwork/elrond-go/crypto"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
 	"github.com/ElrondNetwork/elrond-go/data/state"
+	"github.com/ElrondNetwork/elrond-go/data/state/factory"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
 )
@@ -35,6 +37,16 @@ VERSION:
    {{.Version}}
    {{end}}
 `
+	txSignKeyFormat = cli.StringFlag{
+		Name:  "tx-sign-key-format",
+		Usage: "This flag specifies the format for transactions sign keys",
+		Value: "hex",
+	}
+	blockSignKeyFormat = cli.StringFlag{
+		Name:  "block-sign-key-format",
+		Usage: "This flag specifies the format for blocks sign keys",
+		Value: "hex",
+	}
 	numAddressesWithBalances = cli.IntFlag{
 		Name:  "num-of-addresses-with-balances",
 		Usage: "Number of addresses, private/public keys, with balances to generate",
@@ -142,6 +154,8 @@ func main() {
 	app.Usage = "This binary will generate a initialBalancesSk.pem, initialNodesSk.pem, genesis.json and nodesSetup.json" +
 		" files, to be used in mass deployment"
 	app.Flags = []cli.Flag{
+		txSignKeyFormat,
+		blockSignKeyFormat,
 		numAddressesWithBalances,
 		mintValue,
 		numOfShards,
@@ -175,7 +189,7 @@ func main() {
 	}
 }
 
-func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator) (string, []byte, error) {
+func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator, pubKeyConverter state.PubkeyConverter) (string, []byte, error) {
 	sk, pk := keyGen.GeneratePair()
 	skBytes, err := sk.ToByteArray()
 	if err != nil {
@@ -188,12 +202,18 @@ func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator) (string, []byte, err
 	}
 
 	skHex := []byte(hex.EncodeToString(skBytes))
-	pkHex := hex.EncodeToString(pkBytes)
+	pkHex, err := pubKeyConverter.String(pkBytes)
+	if err != nil {
+		return "", nil, err
+	}
+
 	return pkHex, skHex, nil
 }
 
 func generateFiles(ctx *cli.Context) error {
 	startTime := time.Now()
+	txSignKeyFormatValue := ctx.GlobalString(txSignKeyFormat.Name)
+	blockSignKeyFormatValue := ctx.GlobalString(blockSignKeyFormat.Name)
 	numOfShards := ctx.GlobalInt(numOfShards.Name)
 	numOfNodesPerShard := ctx.GlobalInt(numOfNodesPerShard.Name)
 	consensusGroupSize := ctx.GlobalInt(consensusGroupSize.Name)
@@ -206,6 +226,22 @@ func generateFiles(ctx *cli.Context) error {
 	adaptivityValue := ctx.GlobalBool(adaptivity.Name)
 	chainID := ctx.GlobalString(chainID.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
+
+	pubKeyConverterTxs, errPkC := factory.NewPubkeyConverter(config.PubkeyConfig{
+		Length: 32, // TODO: use a constant after it is defined in elrond-go
+		Type:   txSignKeyFormatValue,
+	})
+	if errPkC != nil {
+		return errPkC
+	}
+
+	pubKeyConverterBlocks, errPkC := factory.NewPubkeyConverter(config.PubkeyConfig{
+		Length: 96, // TODO: use a constant after it is defined in elrond-go
+		Type:   blockSignKeyFormatValue,
+	})
+	if errPkC != nil {
+		return errPkC
+	}
 
 	var totalAddressesWithBalances int
 	if ctx.GlobalIsSet(numAddressesWithBalances.Name) {
@@ -418,21 +454,21 @@ func generateFiles(ctx *cli.Context) error {
 
 	fmt.Println("started generating...")
 	for i := 0; i < totalAddressesWithBalances; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
 		if err != nil {
 			return err
 		}
 
 		if i >= shardsObserversStartIndex {
 			shardId := uint32((i - shardsObserversStartIndex) / numOfObserversPerShard)
-			pk, _ := hex.DecodeString(pkHex)
+			pk, _ := pubKeyConverterTxs.Bytes(pkHex)
 			for shardCoordinator.ComputeId(state.NewAddress(pk)) != shardId {
-				pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
+				pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
 				if err != nil {
 					return err
 				}
 
-				pk, _ = hex.DecodeString(pkHex)
+				pk, _ = pubKeyConverterTxs.Bytes(pkHex)
 			}
 		}
 
@@ -461,7 +497,7 @@ func generateFiles(ctx *cli.Context) error {
 			return errCreatingKeygen
 		}
 
-		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(keyGen)
+		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(keyGen, pubKeyConverterBlocks)
 		if err != nil {
 			return err
 		}
@@ -490,7 +526,7 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	for i := 0; i < numOfAdditionalAccounts; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator)
+		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
 		if err != nil {
 			return err
 		}
@@ -501,7 +537,7 @@ func generateFiles(ctx *cli.Context) error {
 		})
 
 		if generateTxgenFile {
-			pkBytes, _ := hex.DecodeString(pkHex)
+			pkBytes, _ := pubKeyConverterTxs.Bytes(pkHex)
 			address := state.NewAddress(pkBytes)
 			sId := shardCoordinator.ComputeId(address)
 			txgenAccounts[sId] = append(txgenAccounts[sId], &txgenAccount{
