@@ -40,7 +40,7 @@ VERSION:
 	txSignKeyFormat = cli.StringFlag{
 		Name:  "tx-sign-key-format",
 		Usage: "This flag specifies the format for transactions sign keys",
-		Value: "hex",
+		Value: "bech32",
 	}
 	blockSignKeyFormat = cli.StringFlag{
 		Name:  "block-sign-key-format",
@@ -117,15 +117,11 @@ VERSION:
 		Usage: "If set, will generate the accounts.json file needed for txgen",
 	}
 
-	initialBalancesSkFileName      = "./initialBalancesSk.pem"
-	initialBalancesSkPlainFileName = "./initialBalancesSkPlain.txt"
-	initialBalancesPkPlainFileName = "./initialBalancesPkPlain.txt"
-	initialNodesSkFileName         = "./initialNodesSk.pem"
-	initialNodesSkPlainFileName    = "./initialNodesSkPlain.txt"
-	initialNodesPkPlainFileName    = "./initialNodesPkPlain.txt"
-	genesisFilename                = "./genesis.json"
-	nodesSetupFilename             = "./nodesSetup.json"
-	txgenAccountsFileName          = "./accounts.json"
+	walletKeyFileName     = "./walletKey.pem"
+	validatorKeyFileName  = "./validatorKey.pem"
+	genesisFilename       = "./genesis.json"
+	nodesSetupFilename    = "./nodesSetup.json"
+	txgenAccountsFileName = "./accounts.json"
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
@@ -275,44 +271,24 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	var (
-		err                        error
-		initialBalancesSkFile      *os.File
-		initialBalancesSkPlainFile *os.File
-		initialBalancesPkPlainFile *os.File
-		initialNodesSkFile         *os.File
-		initialNodesSkPlainFile    *os.File
-		initialNodesPkPlainFile    *os.File
-		genesisFile                *os.File
-		nodesFile                  *os.File
-		txgenAccountsFile          *os.File
-		pkHex                      string
-		skHex                      []byte
-		suite                      crypto.Suite
-		balancesKeyGenerator       crypto.KeyGenerator
+		err                  error
+		walletKeyFile        *os.File
+		validatorKeyFile     *os.File
+		genesisFile          *os.File
+		nodesFile            *os.File
+		txgenAccountsFile    *os.File
+		pkHex                string
+		skHex                []byte
+		suite                crypto.Suite
+		balancesKeyGenerator crypto.KeyGenerator
 	)
 
 	defer func() {
-		err = initialBalancesSkFile.Close()
+		err = walletKeyFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		err = initialBalancesSkPlainFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = initialBalancesPkPlainFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = initialNodesSkFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = initialNodesSkPlainFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = initialNodesPkPlainFile.Close()
+		err = validatorKeyFile.Close()
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -326,62 +302,22 @@ func generateFiles(ctx *cli.Context) error {
 		}
 	}()
 
-	err = os.Remove(initialBalancesSkFileName)
+	err = os.Remove(walletKeyFileName)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	initialBalancesSkFile, err = os.OpenFile(initialBalancesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	walletKeyFile, err = os.OpenFile(walletKeyFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
 
-	err = os.Remove(initialBalancesSkPlainFileName)
+	err = os.Remove(validatorKeyFileName)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
-	initialBalancesSkPlainFile, err = os.OpenFile(initialBalancesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(initialBalancesPkPlainFileName)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	initialBalancesPkPlainFile, err = os.OpenFile(initialBalancesPkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(initialNodesSkFileName)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	initialNodesSkFile, err = os.OpenFile(initialNodesSkFileName, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(initialNodesSkPlainFileName)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	initialNodesSkPlainFile, err = os.OpenFile(initialNodesSkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(initialNodesPkPlainFileName)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	initialNodesPkPlainFile, err = os.OpenFile(initialNodesPkPlainFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	validatorKeyFile, err = os.OpenFile(validatorKeyFileName, os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -477,17 +413,7 @@ func generateFiles(ctx *cli.Context) error {
 			Balance: initialMint,
 		}
 
-		err = core.SaveSkToPemFile(initialBalancesSkFile, pkHex, skHex)
-		if err != nil {
-			return err
-		}
-
-		_, err = initialBalancesSkPlainFile.Write(append(skHex, '\n'))
-		if err != nil {
-			return err
-		}
-
-		_, err = initialBalancesPkPlainFile.Write(append([]byte(pkHex), '\n'))
+		err = core.SaveSkToPemFile(walletKeyFile, pkHex, skHex)
 		if err != nil {
 			return err
 		}
@@ -502,17 +428,7 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 
-		err = core.SaveSkToPemFile(initialNodesSkFile, pkHexForNode, skHexForNode)
-		if err != nil {
-			return err
-		}
-
-		_, err = initialNodesSkPlainFile.Write(append(skHex, '\n'))
-		if err != nil {
-			return err
-		}
-
-		_, err = initialNodesPkPlainFile.Write(append([]byte(pkHex), '\n'))
+		err = core.SaveSkToPemFile(validatorKeyFile, pkHexForNode, skHexForNode)
 		if err != nil {
 			return err
 		}
