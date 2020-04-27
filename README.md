@@ -15,7 +15,7 @@ Run in  %project_folder%/cmd/filegen folder the following command to build a fil
  
  ```
  $ go build
-$ ./filegen -mint-value 1000000000000000000000000000 -num-of-shards 5 -num-of-nodes-in-each-shard 21 -consensus-group-size 15 -num-of-observers-in-each-shard 1 -num-of-metachain-nodes 21 -metachain-consensus-group-size 15 -num-of-observers-in-metachain 1 -chain-id testnet -hysteresis 0.0
+$ ./filegen -node-price 500000000000000000000000 -total-supply 20000000000000000000000000000 -num-of-shards 5 -num-of-nodes-in-each-shard 21 -consensus-group-size 15 -num-of-observers-in-each-shard 1 -num-of-metachain-nodes 21 -metachain-consensus-group-size 15 -num-of-observers-in-metachain 1 -chain-id testnet -hysteresis 0.0
  ```
  
 ### Running the tests
