@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/ElrondNetwork/elrond-go/config"
 	"github.com/ElrondNetwork/elrond-go/core"
 	"github.com/ElrondNetwork/elrond-go/crypto"
@@ -17,9 +18,16 @@ import (
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
 	"github.com/ElrondNetwork/elrond-go/data/state"
 	"github.com/ElrondNetwork/elrond-go/data/state/factory"
+	"github.com/ElrondNetwork/elrond-go/genesis/data"
+	"github.com/ElrondNetwork/elrond-go/process"
+	"github.com/ElrondNetwork/elrond-go/process/mock"
+	"github.com/ElrondNetwork/elrond-go/process/smartContract/builtInFunctions"
+	"github.com/ElrondNetwork/elrond-go/process/smartContract/hooks"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
 )
+
+const delegatedStakeType = "delegated"
 
 var (
 	fileGenHelpTemplate = `NAME:
@@ -47,15 +55,15 @@ VERSION:
 		Usage: "This flag specifies the format for blocks sign keys",
 		Value: "hex",
 	}
-	numAddressesWithBalances = cli.IntFlag{
-		Name:  "num-of-addresses-with-balances",
-		Usage: "Number of addresses, private/public keys, with balances to generate",
-		Value: 132,
+	totalSupply = cli.StringFlag{
+		Name:  "total-supply",
+		Usage: "Total supply available",
+		Value: "20000000000000000000000000000",
 	}
-	mintValue = cli.StringFlag{
-		Name:  "mint-value",
-		Usage: "Initial minting for all public keys generated - the amount should be boosted by 1e18 for decimal part",
-		Value: "1000000000000000000000000000",
+	nodePrice = cli.StringFlag{
+		Name:  "node-price",
+		Usage: "The cost for a node",
+		Value: "2500000000000000000000000",
 	}
 	numOfShards = cli.IntFlag{
 		Name:  "num-of-shards",
@@ -116,17 +124,32 @@ VERSION:
 		Name:  "txgen",
 		Usage: "If set, will generate the accounts.json file needed for txgen",
 	}
+	stakeType = cli.StringFlag{
+		Name: "stake-type",
+		Usage: "defines the 2 possible ways to stake the nodes: 'direct' as in direct staking " +
+			"and 'delegated' that will stake the nodes through delegation",
+		Value: "direct",
+	}
 
-	walletKeyFileName     = "./walletKey.pem"
-	validatorKeyFileName  = "./validatorKey.pem"
-	genesisFilename       = "./genesis.json"
-	nodesSetupFilename    = "./nodesSetup.json"
-	txgenAccountsFileName = "./accounts.json"
+	walletKeyFileName            = "./walletKey.pem"
+	validatorKeyFileName         = "./validatorKey.pem"
+	genesisFilename              = "./genesis.json"
+	nodesSetupFilename           = "./nodesSetup.json"
+	txgenAccountsFileName        = "./accounts.json"
+	genesisSmartContactsFileName = "./genesisSmartContracts.json"
+
+	delegationScFileName = "./config/genesisContracts/delegation.wasm"
+	vmType               = "0500"
+	initParametersString = "%sc_total_stake%@1000@%auction_sc_address%"
+	scType               = "delegation"
+	ownerNonce           = uint64(0)
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 	errCreatingKeygen        = errors.New("cannot create key gen")
+
+	log = logger.GetOrCreate("main")
 )
 
 type txgenAccount struct {
@@ -143,6 +166,7 @@ type txgenAccount struct {
 // The 2 optional flags are used to specify how many private/public keys to generate and the initial minting for each
 // public generated key
 func main() {
+	_ = logger.SetLogLevel("*:DEBUG")
 	app := cli.NewApp()
 	cli.AppHelpTemplate = fileGenHelpTemplate
 	app.Name = "Deploy Preparation Tool"
@@ -152,8 +176,8 @@ func main() {
 	app.Flags = []cli.Flag{
 		txSignKeyFormat,
 		blockSignKeyFormat,
-		numAddressesWithBalances,
-		mintValue,
+		totalSupply,
+		nodePrice,
 		numOfShards,
 		numOfNodesPerShard,
 		consensusGroupSize,
@@ -166,6 +190,7 @@ func main() {
 		adaptivity,
 		chainID,
 		txgenFile,
+		stakeType,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -180,7 +205,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }
@@ -198,15 +223,14 @@ func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator, pubKeyConverter stat
 	}
 
 	skHex := []byte(hex.EncodeToString(skBytes))
-	pkHex, err := pubKeyConverter.String(pkBytes)
-	if err != nil {
-		return "", nil, err
-	}
+	pkString := pubKeyConverter.Encode(pkBytes)
 
-	return pkHex, skHex, nil
+	return pkString, skHex, nil
 }
 
 func generateFiles(ctx *cli.Context) error {
+	var err error
+
 	startTime := time.Now()
 	txSignKeyFormatValue := ctx.GlobalString(txSignKeyFormat.Name)
 	blockSignKeyFormatValue := ctx.GlobalString(blockSignKeyFormat.Name)
@@ -239,12 +263,8 @@ func generateFiles(ctx *cli.Context) error {
 		return errPkC
 	}
 
-	var totalAddressesWithBalances int
-	if ctx.GlobalIsSet(numAddressesWithBalances.Name) {
-		totalAddressesWithBalances = ctx.GlobalInt(numAddressesWithBalances.Name)
-	} else {
-		totalAddressesWithBalances = numOfShards*(numOfNodesPerShard+numOfObserversPerShard) + numOfMetachainNodes + numOfMetachainObservers
-	}
+	totalAddressesWithBalances := numOfShards*(numOfNodesPerShard+numOfObserversPerShard) +
+		numOfMetachainNodes + numOfMetachainObservers
 
 	invalidNumPrivPubKey := totalAddressesWithBalances < 1 ||
 		numOfShards < 1 ||
@@ -264,99 +284,75 @@ func generateFiles(ctx *cli.Context) error {
 		return errInvalidNumOfNodes
 	}
 
-	initialMint := ctx.GlobalString(mintValue.Name)
-	mintErr := isMintValueValid(initialMint)
-	if mintErr != nil {
-		return mintErr
+	totalSupplyString := ctx.GlobalString(totalSupply.Name)
+	totalSupplyValue, err := convertToBigInt(totalSupplyString)
+	if err != nil {
+		return err
+	}
+
+	nodePriceString := ctx.GlobalString(nodePrice.Name)
+	nodePriceValue, err := convertToBigInt(nodePriceString)
+	if err != nil {
+		return err
 	}
 
 	var (
-		err                  error
 		walletKeyFile        *os.File
 		validatorKeyFile     *os.File
 		genesisFile          *os.File
 		nodesFile            *os.File
 		txgenAccountsFile    *os.File
-		pkHex                string
-		skHex                []byte
+		genesisSCFile        *os.File
+		pkString             string
 		suite                crypto.Suite
 		balancesKeyGenerator crypto.KeyGenerator
 	)
 
 	defer func() {
-		err = walletKeyFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
+		closeFile(walletKeyFile)
+		closeFile(validatorKeyFile)
+		closeFile(genesisFile)
+		closeFile(nodesFile)
+		if txgenAccountsFile != nil {
+			closeFile(txgenAccountsFile)
 		}
-		err = validatorKeyFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = genesisFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		err = nodesFile.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
+		closeFile(genesisSCFile)
 	}()
 
-	err = os.Remove(walletKeyFileName)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	walletKeyFile, err = os.OpenFile(walletKeyFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	walletKeyFile, err = createNewFile(walletKeyFileName)
 	if err != nil {
 		return err
 	}
 
-	err = os.Remove(validatorKeyFileName)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	validatorKeyFile, err = os.OpenFile(validatorKeyFileName, os.O_CREATE|os.O_WRONLY, 0666)
+	validatorKeyFile, err = createNewFile(validatorKeyFileName)
 	if err != nil {
 		return err
 	}
 
-	err = os.Remove(genesisFilename)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	genesisFile, err = os.OpenFile(genesisFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	genesisFile, err = createNewFile(genesisFilename)
 	if err != nil {
 		return err
 	}
 
-	err = os.Remove(nodesSetupFilename)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-
-	nodesFile, err = os.OpenFile(nodesSetupFilename, os.O_CREATE|os.O_WRONLY, 0666)
+	nodesFile, err = createNewFile(nodesSetupFilename)
 	if err != nil {
 		return err
 	}
 
 	if generateTxgenFile {
-		err = os.Remove(txgenAccountsFileName)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-
-		txgenAccountsFile, err = os.OpenFile(txgenAccountsFileName, os.O_CREATE|os.O_WRONLY, 0666)
+		txgenAccountsFile, err = createNewFile(txgenAccountsFileName)
 		if err != nil {
 			return err
 		}
 	}
 
-	genesis := &sharding.Genesis{
-		InitialBalances: make([]*sharding.InitialBalance, totalAddressesWithBalances),
+	genesisSCFile, err = createNewFile(genesisSmartContactsFileName)
+	if err != nil {
+		return err
 	}
+
+	genesisList := make([]*data.InitialAccount, 0, totalAddressesWithBalances)
+	initialSC := make([]*data.InitialSmartContract, 0)
 
 	var initialNodes []*sharding.InitialNode
 	nodes := &sharding.NodesSetup{
@@ -377,8 +373,6 @@ func generateFiles(ctx *cli.Context) error {
 	suite = ed25519.NewEd25519()
 	balancesKeyGenerator = signing.NewKeyGenerator(suite)
 
-	shardsObserversStartIndex := totalAddressesWithBalances - numOfShards*numOfObserversPerShard
-
 	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShards), 0)
 	if err != nil {
 		return err
@@ -386,139 +380,340 @@ func generateFiles(ctx *cli.Context) error {
 
 	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 	numValidators := totalAddressesWithBalances - numObservers
-	mintValueBigInt, _ := big.NewInt(0).SetString(initialMint, 10)
 
-	fmt.Println("started generating...")
+	//initialTotalBalance = totalSupply - (numValidators * nodePriceValue)
+	initialTotalBalance := big.NewInt(0).Set(totalSupplyValue)
+	staked := big.NewInt(0).Mul(big.NewInt(int64(numValidators)), nodePriceValue)
+	initialTotalBalance.Sub(initialTotalBalance, staked)
+
+	// initialNodeBalance = initialTotalBalance / (totalAddressesWithBalances + numOfAdditionalAccounts)
+	initialNodeBalance := big.NewInt(0).Set(initialTotalBalance)
+	initialNodeBalance.Div(initialNodeBalance,
+		big.NewInt(int64(totalAddressesWithBalances+numOfAdditionalAccounts)))
+	log.Debug("supply values",
+		"total supply", totalSupplyValue.String(),
+		"staked", staked.String(),
+		"initial total balance", initialTotalBalance.String(),
+	)
+	log.Debug("nodes",
+		"num nodes with balance", totalAddressesWithBalances,
+		"num additional accounts", numOfAdditionalAccounts,
+		"num validators", numValidators,
+		"num observers", numObservers,
+		"initial node balance", initialNodeBalance.String(),
+	)
+
+	stakeTypeString := ctx.GlobalString(stakeType.Name)
+	delegationScAddress := ""
+	delegationValue := big.NewInt(0)
+	stakedValue := big.NewInt(0).Set(nodePriceValue)
+	if stakeTypeString == delegatedStakeType {
+		pkString, _, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+		if err != nil {
+			return err
+		}
+
+		delegationScAddress, err = generateScDelegationAddress(pkString, pubKeyConverterTxs)
+		if err != nil {
+			return fmt.Errorf("%w when generationg resulted delegation address", err)
+		}
+
+		stakedValue = big.NewInt(0)
+		delegationValue = big.NewInt(0).Set(nodePriceValue)
+
+		initialSC = append(initialSC, &data.InitialSmartContract{
+			Owner:          pkString,
+			Filename:       delegationScFileName,
+			VmType:         vmType,
+			InitParameters: initParametersString,
+			Type:           scType,
+		})
+	}
+
+	log.Info("started generating...")
 	for i := 0; i < totalAddressesWithBalances; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+		isValidator := i < numValidators
+
+		ia, node, err := createInitialAccount(
+			balancesKeyGenerator,
+			pubKeyConverterTxs,
+			pubKeyConverterBlocks,
+			initialNodeBalance,
+			delegationValue,
+			stakedValue,
+			delegationScAddress,
+			walletKeyFile,
+			validatorKeyFile,
+			isValidator,
+			stakeTypeString,
+		)
 		if err != nil {
 			return err
 		}
 
-		if i >= shardsObserversStartIndex {
-			shardId := uint32((i - shardsObserversStartIndex) / numOfObserversPerShard)
-			pk, _ := pubKeyConverterTxs.Bytes(pkHex)
-			for shardCoordinator.ComputeId(state.NewAddress(pk)) != shardId {
-				pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
-				if err != nil {
-					return err
-				}
-
-				pk, _ = pubKeyConverterTxs.Bytes(pkHex)
-			}
-		}
-
-		genesis.InitialBalances[i] = &sharding.InitialBalance{
-			PubKey:  pkHex,
-			Balance: initialMint,
-		}
-
-		err = core.SaveSkToPemFile(walletKeyFile, pkHex, skHex)
-		if err != nil {
-			return err
-		}
-
-		keyGen := getNodesKeyGen()
-		if keyGen == nil {
-			return errCreatingKeygen
-		}
-
-		pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(keyGen, pubKeyConverterBlocks)
-		if err != nil {
-			return err
-		}
-
-		err = core.SaveSkToPemFile(validatorKeyFile, pkHexForNode, skHexForNode)
-		if err != nil {
-			return err
-		}
-
-		if i < numValidators {
-			nodes.InitialNodes = append(nodes.InitialNodes, &sharding.InitialNode{
-				PubKey:  pkHexForNode,
-				Address: pkHex,
-			})
+		genesisList = append(genesisList, ia)
+		if node != nil {
+			nodes.InitialNodes = append(nodes.InitialNodes, node)
 		}
 	}
 
 	for i := 0; i < numOfAdditionalAccounts; i++ {
-		pkHex, skHex, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+		ia, txGenAccount, shardID, err := createAdditionalNode(
+			balancesKeyGenerator,
+			pubKeyConverterTxs,
+			initialNodeBalance,
+			shardCoordinator,
+			generateTxgenFile,
+		)
 		if err != nil {
 			return err
 		}
 
-		genesis.InitialBalances = append(genesis.InitialBalances, &sharding.InitialBalance{
-			PubKey:  pkHex,
-			Balance: initialMint,
-		})
-
-		if generateTxgenFile {
-			pkBytes, _ := pubKeyConverterTxs.Bytes(pkHex)
-			address := state.NewAddress(pkBytes)
-			sId := shardCoordinator.ComputeId(address)
-			txgenAccounts[sId] = append(txgenAccounts[sId], &txgenAccount{
-				PubKey:        pkHex,
-				PrivKey:       string(skHex),
-				LastNonce:     0,
-				Balance:       mintValueBigInt,
-				TokenBalance:  big.NewInt(0),
-				CanReuseNonce: true,
-			})
+		if txGenAccount != nil {
+			txgenAccounts[shardID] = append(txgenAccounts[shardID], txGenAccount)
 		}
+
+		genesisList = append(genesisList, ia)
 	}
 
-	genesisBuff, err := json.MarshalIndent(genesis, "", "  ")
+	//take the remainder and set it on the first node
+	// initialBalance = initialTotalBalance - (totalAddressesWithBalances + numOfAdditionalAccounts - 1) * initialNodeBalance
+	firstInitialAccount := genesisList[0]
+	initialBalance := big.NewInt(0).Set(initialNodeBalance)
+	subs := big.NewInt(int64(totalAddressesWithBalances+numOfAdditionalAccounts) - 1)
+	subs.Mul(subs, big.NewInt(0).Set(initialNodeBalance))
+	initialBalance = big.NewInt(0).Set(initialTotalBalance)
+	initialBalance.Sub(initialBalance, subs)
+
+	firstInitialAccount.Balance = big.NewInt(0).Set(initialBalance)
+	supply := big.NewInt(0).Set(initialBalance)
+	supply.Add(supply, firstInitialAccount.StakingValue)
+	supply.Add(supply, firstInitialAccount.Delegation.Value)
+	firstInitialAccount.Supply = supply
+
+	err = writeDataInFile(genesisFile, genesisList)
 	if err != nil {
 		return err
 	}
 
-	_, err = genesisFile.Write(genesisBuff)
-	if err != nil {
-		return err
-	}
-
-	nodesBuff, err := json.MarshalIndent(nodes, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	_, err = nodesFile.Write(nodesBuff)
+	err = writeDataInFile(nodesFile, nodes)
 	if err != nil {
 		return err
 	}
 
 	if generateTxgenFile {
-		txgenAccountsBuff, err := json.MarshalIndent(txgenAccounts, "", "  ")
-		if err != nil {
-			return err
-		}
-
-		_, err = txgenAccountsFile.Write(txgenAccountsBuff)
+		err = writeDataInFile(txgenAccountsFile, txgenAccounts)
 		if err != nil {
 			return err
 		}
 	}
 
-	fmt.Println("elapsed time in seconds", time.Since(startTime).Seconds())
-	fmt.Println("Files generated successfully!")
+	err = writeDataInFile(genesisSCFile, initialSC)
+	if err != nil {
+		return err
+	}
+
+	log.Info("elapsed time in seconds", time.Since(startTime).Seconds())
+	log.Info("files generated successfully!")
 	return nil
 }
 
-func isMintValueValid(mintValue string) error {
-	mintNumber, isNumber := big.NewInt(0).SetString(mintValue, 10)
+func createInitialAccount(
+	balancesKeyGenerator crypto.KeyGenerator,
+	pubKeyConverterTxs state.PubkeyConverter,
+	pubKeyConverterBlocks state.PubkeyConverter,
+	initialNodeBalance *big.Int,
+	delegationValue *big.Int,
+	stakedValue *big.Int,
+	delegationScAddress string,
+	walletKeyFile *os.File,
+	validatorKeyFile *os.File,
+	isValidator bool,
+	stakeTypeString string,
+) (*data.InitialAccount, *sharding.InitialNode, error) {
+
+	pkString, skHex, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	supply := big.NewInt(0).Set(big.NewInt(0).Set(initialNodeBalance))
+	supply.Add(supply, delegationValue)
+	supply.Add(supply, stakedValue)
+	ia := &data.InitialAccount{
+		Address:      pkString,
+		Supply:       supply,
+		Balance:      big.NewInt(0).Set(initialNodeBalance),
+		StakingValue: stakedValue,
+		Delegation: &data.DelegationData{
+			Address: delegationScAddress,
+			Value:   delegationValue,
+		},
+	}
+
+	err = core.SaveSkToPemFile(walletKeyFile, pkString, skHex)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keyGen := getNodesKeyGen()
+	if keyGen == nil {
+		return nil, nil, errCreatingKeygen
+	}
+
+	pkHexForNode, skHexForNode, err := getIdentifierAndPrivateKey(keyGen, pubKeyConverterBlocks)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = core.SaveSkToPemFile(validatorKeyFile, pkHexForNode, skHexForNode)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var node *sharding.InitialNode
+	if isValidator {
+		node = &sharding.InitialNode{
+			PubKey:  pkHexForNode,
+			Address: pkString,
+		}
+
+		if stakeTypeString == delegatedStakeType {
+			node.Address = delegationScAddress
+		}
+	} else {
+		ia.StakingValue = big.NewInt(0)
+		ia.Supply = big.NewInt(0).Set(ia.Balance)
+		ia.Delegation.Address = ""
+		ia.Delegation.Value = big.NewInt(0)
+	}
+
+	return ia, node, nil
+}
+
+func createAdditionalNode(
+	balancesKeyGenerator crypto.KeyGenerator,
+	pubKeyConverterTxs state.PubkeyConverter,
+	initialNodeBalance *big.Int,
+	shardCoordinator sharding.Coordinator,
+	generateTxgenFile bool,
+) (*data.InitialAccount, *txgenAccount, uint32, error) {
+
+	pkString, skHex, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	ia := &data.InitialAccount{
+		Address:      pkString,
+		Supply:       big.NewInt(0).Set(initialNodeBalance),
+		Balance:      big.NewInt(0).Set(initialNodeBalance),
+		StakingValue: big.NewInt(0),
+		Delegation: &data.DelegationData{
+			Address: "",
+			Value:   big.NewInt(0),
+		},
+	}
+
+	var txGen *txgenAccount
+	var shId uint32
+	if generateTxgenFile {
+		pkBytes, _ := pubKeyConverterTxs.Decode(pkString)
+		shId = shardCoordinator.ComputeId(pkBytes)
+
+		txGen = &txgenAccount{
+			PubKey:        pkString,
+			PrivKey:       string(skHex),
+			LastNonce:     0,
+			Balance:       big.NewInt(0).Set(initialNodeBalance),
+			TokenBalance:  big.NewInt(0),
+			CanReuseNonce: true,
+		}
+	}
+
+	return ia, txGen, shId, nil
+}
+
+func convertToBigInt(value string) (*big.Int, error) {
+	valueNumber, isNumber := big.NewInt(0).SetString(value, 10)
 	if !isNumber {
-		return errInvalidMintValue
+		return nil, errInvalidMintValue
 	}
 
-	if mintNumber.Cmp(big.NewInt(0)) < 0 {
-		return errInvalidMintValue
+	if valueNumber.Cmp(big.NewInt(0)) < 0 {
+		return nil, errInvalidMintValue
 	}
 
-	return nil
+	return valueNumber, nil
 }
 
 func getNodesKeyGen() crypto.KeyGenerator {
 	suite := mcl.NewSuiteBLS12()
 
 	return signing.NewKeyGenerator(suite)
+}
+
+func closeFile(f *os.File) {
+	err := f.Close()
+	log.LogIfError(err)
+}
+
+func createNewFile(filename string) (*os.File, error) {
+	err := os.Remove(filename)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	return os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0666)
+}
+
+func writeDataInFile(file *os.File, data interface{}) error {
+	buff, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(buff)
+
+	return err
+}
+
+func generateScDelegationAddress(pkString string, converter state.PubkeyConverter) (string, error) {
+	blockchainHook, err := generateBlockchainHook(converter)
+	if err != nil {
+		return "", err
+	}
+
+	pk, err := converter.Decode(pkString)
+	if err != nil {
+		return "", err
+	}
+
+	vmTypeBytes, err := hex.DecodeString(vmType)
+	if err != nil {
+		return "", err
+	}
+
+	scResultingAddressBytes, err := blockchainHook.NewAddress(pk, ownerNonce, vmTypeBytes)
+	if err != nil {
+		return "", err
+	}
+
+	return converter.Encode(scResultingAddressBytes), nil
+}
+
+func generateBlockchainHook(converter state.PubkeyConverter) (process.BlockChainHookHandler, error) {
+	builtInFuncs := builtInFunctions.NewBuiltInFunctionContainer()
+	arg := hooks.ArgBlockChainHook{
+		Accounts:         &mock.AccountsStub{},
+		PubkeyConv:       converter,
+		StorageService:   &mock.ChainStorerMock{},
+		BlockChain:       &mock.BlockChainMock{},
+		ShardCoordinator: mock.NewOneShardCoordinatorMock(),
+		Marshalizer:      &mock.MarshalizerMock{},
+		Uint64Converter:  &mock.Uint64ByteSliceConverterMock{},
+		BuiltInFunctions: builtInFuncs,
+	}
+
+	return hooks.NewBlockChainHookImpl(arg)
 }
