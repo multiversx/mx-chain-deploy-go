@@ -63,7 +63,7 @@ VERSION:
 	nodePrice = cli.StringFlag{
 		Name:  "node-price",
 		Usage: "The cost for a node",
-		Value: "500000000000000000000000",
+		Value: "2500000000000000000000000",
 	}
 	numOfShards = cli.IntFlag{
 		Name:  "num-of-shards",
@@ -126,7 +126,7 @@ VERSION:
 	}
 	stakeType = cli.StringFlag{
 		Name: "stake-type",
-		Usage: "defines the 2 possible way to stake the nodes: 'direct' as in direct staking " +
+		Usage: "defines the 2 possible ways to stake the nodes: 'direct' as in direct staking " +
 			"and 'delegated' that will stake the nodes through delegation",
 		Value: "direct",
 	}
@@ -309,14 +309,14 @@ func generateFiles(ctx *cli.Context) error {
 	)
 
 	defer func() {
-		closeWithLog(walletKeyFile)
-		closeWithLog(validatorKeyFile)
-		closeWithLog(genesisFile)
-		closeWithLog(nodesFile)
+		closeFile(walletKeyFile)
+		closeFile(validatorKeyFile)
+		closeFile(genesisFile)
+		closeFile(nodesFile)
 		if txgenAccountsFile != nil {
-			closeWithLog(txgenAccountsFile)
+			closeFile(txgenAccountsFile)
 		}
-		closeWithLog(genesisSCFile)
+		closeFile(genesisSCFile)
 	}()
 
 	walletKeyFile, err = createNewFile(walletKeyFileName)
@@ -478,18 +478,18 @@ func generateFiles(ctx *cli.Context) error {
 
 	//take the remainder and set it on the first node
 	// initialBalance = initialTotalBalance - (totalAddressesWithBalances + numOfAdditionalAccounts - 1) * initialNodeBalance
-	iaFirst := genesisList[0]
+	firstInitialAccount := genesisList[0]
 	initialBalance := big.NewInt(0).Set(initialNodeBalance)
 	subs := big.NewInt(int64(totalAddressesWithBalances+numOfAdditionalAccounts) - 1)
 	subs.Mul(subs, big.NewInt(0).Set(initialNodeBalance))
 	initialBalance = big.NewInt(0).Set(initialTotalBalance)
 	initialBalance.Sub(initialBalance, subs)
 
-	iaFirst.Balance = big.NewInt(0).Set(initialBalance)
+	firstInitialAccount.Balance = big.NewInt(0).Set(initialBalance)
 	supply := big.NewInt(0).Set(initialBalance)
-	supply.Add(supply, iaFirst.StakingValue)
-	supply.Add(supply, iaFirst.Delegation.Value)
-	iaFirst.Supply = supply
+	supply.Add(supply, firstInitialAccount.StakingValue)
+	supply.Add(supply, firstInitialAccount.Delegation.Value)
+	firstInitialAccount.Supply = supply
 
 	err = writeDataInFile(genesisFile, genesisList)
 	if err != nil {
@@ -653,7 +653,7 @@ func getNodesKeyGen() crypto.KeyGenerator {
 	return signing.NewKeyGenerator(suite)
 }
 
-func closeWithLog(f *os.File) {
+func closeFile(f *os.File) {
 	err := f.Close()
 	log.LogIfError(err)
 }
