@@ -19,7 +19,9 @@ $ ./filegen -node-price 2500000000000000000000000 -total-supply 2000000000000000
  ```
 
 There is an optional flag called `-stake-type` that can have one of the 2 values: `direct` and `delegated`. If the `delegated` 
-option is selected, the initial staking will be done through the delegation SC.
+option is selected, the initial staking will be done through the delegation SC. When set to "delegated" mode, there are 
+2 optional flags `delegation-init` for setting a custom init string and `delegation-version` for setting the correspondent 
+delegation SC version.
  
 ### Running the tests
 ```
