@@ -130,8 +130,19 @@ VERSION:
 			"and 'delegated' that will stake the nodes through delegation",
 		Value: "direct",
 	}
+	delegationInitString = cli.StringFlag{
+		Name:  "delegation-init",
+		Usage: "defines the delegation init string, something like '0BB8@%auction_sc_address%@0A61D0'",
+		Value: "0BB8@%auction_sc_address%@0A61D0",
+	}
+	delegationVersionString = cli.StringFlag{
+		Name:  "delegation-version",
+		Usage: "defines the delegation SC version",
+		Value: "0.2.*",
+	}
 
 	walletKeyFileName            = "./walletKey.pem"
+	delegationWalletKeyFileName  = "./delegationWalletKey.pem"
 	validatorKeyFileName         = "./validatorKey.pem"
 	genesisFilename              = "./genesis.json"
 	nodesSetupFilename           = "./nodesSetup.json"
@@ -140,7 +151,6 @@ VERSION:
 
 	delegationScFileName = "./config/genesisContracts/delegation.wasm"
 	vmType               = "0500"
-	initParametersString = "%sc_total_stake%@1000@%auction_sc_address%"
 	scType               = "delegation"
 	ownerNonce           = uint64(0)
 
@@ -191,6 +201,8 @@ func main() {
 		chainID,
 		txgenFile,
 		stakeType,
+		delegationInitString,
+		delegationVersionString,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -297,25 +309,24 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	var (
-		walletKeyFile        *os.File
-		validatorKeyFile     *os.File
-		genesisFile          *os.File
-		nodesFile            *os.File
-		txgenAccountsFile    *os.File
-		genesisSCFile        *os.File
-		pkString             string
-		suite                crypto.Suite
-		balancesKeyGenerator crypto.KeyGenerator
+		delegationWalletKeyFile *os.File
+		walletKeyFile           *os.File
+		validatorKeyFile        *os.File
+		genesisFile             *os.File
+		nodesFile               *os.File
+		txgenAccountsFile       *os.File
+		genesisSCFile           *os.File
+		suite                   crypto.Suite
+		balancesKeyGenerator    crypto.KeyGenerator
 	)
 
 	defer func() {
+		closeFile(delegationWalletKeyFile)
 		closeFile(walletKeyFile)
 		closeFile(validatorKeyFile)
 		closeFile(genesisFile)
 		closeFile(nodesFile)
-		if txgenAccountsFile != nil {
-			closeFile(txgenAccountsFile)
-		}
+		closeFile(txgenAccountsFile)
 		closeFile(genesisSCFile)
 	}()
 
@@ -408,12 +419,22 @@ func generateFiles(ctx *cli.Context) error {
 	delegationValue := big.NewInt(0)
 	stakedValue := big.NewInt(0).Set(nodePriceValue)
 	if stakeTypeString == delegatedStakeType {
-		pkString, _, err = getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+		delegationWalletKeyFile, err = createNewFile(delegationWalletKeyFileName)
 		if err != nil {
 			return err
 		}
 
-		delegationScAddress, err = generateScDelegationAddress(pkString, pubKeyConverterTxs)
+		pkStringDelegator, skDelegator, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+		if err != nil {
+			return err
+		}
+
+		err = core.SaveSkToPemFile(delegationWalletKeyFile, pkStringDelegator, skDelegator)
+		if err != nil {
+			return err
+		}
+
+		delegationScAddress, err = generateScDelegationAddress(pkStringDelegator, pubKeyConverterTxs)
 		if err != nil {
 			return fmt.Errorf("%w when generationg resulted delegation address", err)
 		}
@@ -421,12 +442,16 @@ func generateFiles(ctx *cli.Context) error {
 		stakedValue = big.NewInt(0)
 		delegationValue = big.NewInt(0).Set(nodePriceValue)
 
+		initParameters := ctx.GlobalString(delegationInitString.Name)
+		version := ctx.GlobalString(delegationVersionString.Name)
+
 		initialSC = append(initialSC, &data.InitialSmartContract{
-			Owner:          pkString,
+			Owner:          pkStringDelegator,
 			Filename:       delegationScFileName,
 			VmType:         vmType,
-			InitParameters: initParametersString,
+			InitParameters: initParameters,
 			Type:           scType,
+			Version:        version,
 		})
 	}
 
@@ -654,8 +679,10 @@ func getNodesKeyGen() crypto.KeyGenerator {
 }
 
 func closeFile(f *os.File) {
-	err := f.Close()
-	log.LogIfError(err)
+	if f != nil {
+		err := f.Close()
+		log.LogIfError(err)
+	}
 }
 
 func createNewFile(filename string) (*os.File, error) {
