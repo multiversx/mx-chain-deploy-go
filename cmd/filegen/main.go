@@ -28,6 +28,7 @@ import (
 )
 
 const delegatedStakeType = "delegated"
+const defaultRoundDuration = 5000
 
 var (
 	fileGenHelpTemplate = `NAME:
@@ -368,7 +369,7 @@ func generateFiles(ctx *cli.Context) error {
 	var initialNodes []*sharding.InitialNode
 	nodes := &sharding.NodesSetup{
 		StartTime:                   0,
-		RoundDuration:               4000,
+		RoundDuration:               defaultRoundDuration,
 		ConsensusGroupSize:          uint32(consensusGroupSize),
 		MinNodesPerShard:            uint32(numOfNodesPerShard),
 		MetaChainConsensusGroupSize: uint32(metachainConsensusGroupSize),
