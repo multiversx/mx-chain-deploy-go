@@ -28,6 +28,7 @@ import (
 )
 
 const delegatedStakeType = "delegated"
+const defaultRoundDuration = 5000
 
 var (
 	fileGenHelpTemplate = `NAME:
@@ -132,13 +133,13 @@ VERSION:
 	}
 	delegationInitString = cli.StringFlag{
 		Name:  "delegation-init",
-		Usage: "defines the delegation init string, something like '0BB8@%auction_sc_address%@0A61D0'",
-		Value: "0BB8@%auction_sc_address%@0A61D0",
+		Usage: "defines the delegation init string, something like '%auction_sc_address%@03E8@03E8@03E8'",
+		Value: "%auction_sc_address%@03E8@03E8@03E8",
 	}
 	delegationVersionString = cli.StringFlag{
 		Name:  "delegation-version",
 		Usage: "defines the delegation SC version",
-		Value: "0.2.*",
+		Value: "0.3.*",
 	}
 
 	walletKeyFileName            = "./walletKey.pem"
@@ -368,7 +369,7 @@ func generateFiles(ctx *cli.Context) error {
 	var initialNodes []*sharding.InitialNode
 	nodes := &sharding.NodesSetup{
 		StartTime:                   0,
-		RoundDuration:               4000,
+		RoundDuration:               defaultRoundDuration,
 		ConsensusGroupSize:          uint32(consensusGroupSize),
 		MinNodesPerShard:            uint32(numOfNodesPerShard),
 		MetaChainConsensusGroupSize: uint32(metachainConsensusGroupSize),
