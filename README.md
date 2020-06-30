@@ -28,6 +28,14 @@ $ ./filegen -stake-type delegated -node-price 2500000000000000000000000 -total-s
 In the "delegated" mode the  initial staking will be done through the delegation SC. When set to "delegated" mode, there are 
 2 optional flags `delegation-init` for setting a custom init string and `delegation-version` for setting the correspondent 
 delegation SC version.
+
+### Running with docker
+```
+$ docker pull elrondnetwork/elrond-go-filegen:tagname
+$ docker run -v /tmp/:/data/ elrondnetwork/elrond-go-filegen:latest -stake-type direct -node-price 2500000000000000000000000 -total-supply 20000000000000000000000000000 -num-of-shards 5 ...
+```
+This will create the files on the host machine running Docker at the path location `/tmp/`.
+Detailed information about the build is located under https://hub.docker.com/r/elrondnetwork/elrond-go-filegen
  
 ## Running the tests
 ```
