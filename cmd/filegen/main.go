@@ -29,6 +29,13 @@ import (
 const delegatedStakeType = "delegated"
 const defaultRoundDuration = 5000
 
+const dnsPkOwner = "erd16grmckn46ry7fwyvass8e8pz88klazzpc0c5f0pnrv643td4797sgnvjkm"
+const dnsFilename = "./config/genesisContracts/dns.wasm"
+const dnsVmType = "0500"
+const dnsInitParams = "056bc75e2d63100000"
+const dnsScType = "dns"
+const dnsVersion = "0.2.*"
+
 var (
 	fileGenHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
@@ -462,6 +469,15 @@ func generateFiles(ctx *cli.Context) error {
 			Version:        version,
 		})
 	}
+
+	initialSC = append(initialSC, &data.InitialSmartContract{
+		Owner:          dnsPkOwner,
+		Filename:       dnsFilename,
+		VmType:         dnsVmType,
+		InitParameters: dnsInitParams,
+		Type:           dnsScType,
+		Version:        dnsVersion,
+	})
 
 	log.Info("started generating...")
 	for i := 0; i < totalAddressesWithBalances; i++ {
