@@ -16,7 +16,6 @@ import (
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
-	"github.com/ElrondNetwork/elrond-go/data/state"
 	"github.com/ElrondNetwork/elrond-go/data/state/factory"
 	"github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/process"
@@ -128,6 +127,11 @@ VERSION:
 		Usage: "Chain ID flag",
 		Value: "testnet",
 	}
+	transactionVersion = cli.UintFlag{
+		Name:  "tx-version",
+		Usage: "Transaction Version flag flag",
+		Value: 1,
+	}
 	txgenFile = cli.BoolFlag{
 		Name:  "txgen",
 		Usage: "If set, will generate the accounts.json file needed for txgen",
@@ -207,6 +211,7 @@ func main() {
 		hysteresis,
 		adaptivity,
 		chainID,
+		transactionVersion,
 		txgenFile,
 		stakeType,
 		delegationInitString,
@@ -230,7 +235,7 @@ func main() {
 	}
 }
 
-func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator, pubKeyConverter state.PubkeyConverter) (string, []byte, error) {
+func getIdentifierAndPrivateKey(keyGen crypto.KeyGenerator, pubKeyConverter core.PubkeyConverter) (string, []byte, error) {
 	sk, pk := keyGen.GeneratePair()
 	skBytes, err := sk.ToByteArray()
 	if err != nil {
@@ -265,6 +270,7 @@ func generateFiles(ctx *cli.Context) error {
 	hysteresisValue := ctx.GlobalFloat64(hysteresis.Name)
 	adaptivityValue := ctx.GlobalBool(adaptivity.Name)
 	chainID := ctx.GlobalString(chainID.Name)
+	txVersion := ctx.GlobalUint(transactionVersion.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
 
 	pubKeyConverterTxs, errPkC := factory.NewPubkeyConverter(config.PubkeyConfig{
@@ -384,6 +390,7 @@ func generateFiles(ctx *cli.Context) error {
 		Hysteresis:                  float32(hysteresisValue),
 		Adaptivity:                  adaptivityValue,
 		ChainID:                     chainID,
+		MinTransactionVersion:       uint32(txVersion),
 		InitialNodes:                initialNodes,
 	}
 
@@ -562,8 +569,8 @@ func generateFiles(ctx *cli.Context) error {
 
 func createInitialAccount(
 	balancesKeyGenerator crypto.KeyGenerator,
-	pubKeyConverterTxs state.PubkeyConverter,
-	pubKeyConverterBlocks state.PubkeyConverter,
+	pubKeyConverterTxs core.PubkeyConverter,
+	pubKeyConverterBlocks core.PubkeyConverter,
 	initialNodeBalance *big.Int,
 	delegationValue *big.Int,
 	stakedValue *big.Int,
@@ -635,7 +642,7 @@ func createInitialAccount(
 
 func createAdditionalNode(
 	balancesKeyGenerator crypto.KeyGenerator,
-	pubKeyConverterTxs state.PubkeyConverter,
+	pubKeyConverterTxs core.PubkeyConverter,
 	initialNodeBalance *big.Int,
 	shardCoordinator sharding.Coordinator,
 	generateTxgenFile bool,
@@ -722,7 +729,7 @@ func writeDataInFile(file *os.File, data interface{}) error {
 	return err
 }
 
-func generateScDelegationAddress(pkString string, converter state.PubkeyConverter) (string, error) {
+func generateScDelegationAddress(pkString string, converter core.PubkeyConverter) (string, error) {
 	blockchainHook, err := generateBlockchainHook(converter)
 	if err != nil {
 		return "", err
@@ -746,7 +753,7 @@ func generateScDelegationAddress(pkString string, converter state.PubkeyConverte
 	return converter.Encode(scResultingAddressBytes), nil
 }
 
-func generateBlockchainHook(converter state.PubkeyConverter) (process.BlockChainHookHandler, error) {
+func generateBlockchainHook(converter core.PubkeyConverter) (process.BlockChainHookHandler, error) {
 	builtInFuncs := builtInFunctions.NewBuiltInFunctionContainer()
 	arg := hooks.ArgBlockChainHook{
 		Accounts:         &mock.AccountsStub{},
