@@ -29,6 +29,9 @@ In the "delegated" mode the  initial staking will be done through the delegation
 2 optional flags `delegation-init` for setting a custom init string and `delegation-version` for setting the correspondent 
 delegation SC version.
 
+Important: if the hysteresis value is greater than 0, the binary will add more nodes as validators in order to 
+compensate for the nodes in the waiting list. 
+
 ### Running with docker
 ```
 $ docker pull elrondnetwork/elrond-go-filegen:tagname
