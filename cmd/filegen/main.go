@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"time"
@@ -289,8 +290,12 @@ func generateFiles(ctx *cli.Context) error {
 		return errPkC
 	}
 
-	totalAddressesWithBalances := numOfShards*(numOfNodesPerShard+numOfObserversPerShard) +
-		numOfMetachainNodes + numOfMetachainObservers
+	numValidatorsOnAShard := int(math.Ceil(float64(numOfNodesPerShard) * (1 + hysteresisValue)))
+	numShardValidators := numOfShards * numValidatorsOnAShard
+	numValidatorsOnMeta := int(math.Ceil(float64(numOfMetachainNodes) * (1 + hysteresisValue)))
+
+	totalAddressesWithBalances := numShardValidators + numValidatorsOnMeta +
+		numOfShards*numOfObserversPerShard + numOfMetachainObservers
 
 	invalidNumPrivPubKey := totalAddressesWithBalances < 1 ||
 		numOfShards < 1 ||
