@@ -66,12 +66,12 @@ VERSION:
 	totalSupply = cli.StringFlag{
 		Name:  "total-supply",
 		Usage: "Total supply available",
-		Value: "20000000000000000000000000000",
+		Value: "20000000000000000000000000",
 	}
 	nodePrice = cli.StringFlag{
 		Name:  "node-price",
 		Usage: "The cost for a node",
-		Value: "2500000000000000000000000",
+		Value: "2500000000000000000000",
 	}
 	numOfShards = cli.IntFlag{
 		Name:  "num-of-shards",
