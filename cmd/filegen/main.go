@@ -113,6 +113,11 @@ VERSION:
 		Usage: "Number of initial metachain observers, private/public keys, to generate",
 		Value: 1,
 	}
+	initialRating = cli.Uint64Flag{
+		Name:  "initial-rating",
+		Usage: "The initial rating to be used for each node",
+		Value: 50,
+	}
 	hysteresis = cli.Float64Flag{
 		Name: "hysteresis",
 		Usage: "Hysteresis value - multiplied with numOfNodesPerShard to compute number of nodes allowed in the " +
@@ -209,6 +214,7 @@ func main() {
 		metachainConsensusGroupSize,
 		numOfMetachainObservers,
 		numAdditionalAccountsInGenesis,
+		initialRating,
 		hysteresis,
 		adaptivity,
 		chainID,
@@ -268,6 +274,7 @@ func generateFiles(ctx *cli.Context) error {
 	metachainConsensusGroupSize := ctx.GlobalInt(metachainConsensusGroupSize.Name)
 	numOfMetachainObservers := ctx.GlobalInt(numOfMetachainObservers.Name)
 	numOfAdditionalAccounts := ctx.GlobalInt(numAdditionalAccountsInGenesis.Name)
+	initialRating := ctx.GlobalUint64(initialRating.Name)
 	hysteresisValue := ctx.GlobalFloat64(hysteresis.Name)
 	adaptivityValue := ctx.GlobalBool(adaptivity.Name)
 	chainID := ctx.GlobalString(chainID.Name)
@@ -500,6 +507,7 @@ func generateFiles(ctx *cli.Context) error {
 			validatorKeyFile,
 			isValidator,
 			stakeTypeString,
+			uint32(initialRating),
 		)
 		if err != nil {
 			return err
@@ -584,6 +592,7 @@ func createInitialAccount(
 	validatorKeyFile *os.File,
 	isValidator bool,
 	stakeTypeString string,
+	initialRating uint32,
 ) (*data.InitialAccount, *sharding.InitialNode, error) {
 
 	pkString, skHex, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
@@ -628,8 +637,9 @@ func createInitialAccount(
 	var node *sharding.InitialNode
 	if isValidator {
 		node = &sharding.InitialNode{
-			PubKey:  pkHexForNode,
-			Address: pkString,
+			PubKey:        pkHexForNode,
+			Address:       pkString,
+			InitialRating: initialRating,
 		}
 
 		if stakeTypeString == delegatedStakeType {
