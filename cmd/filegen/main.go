@@ -116,7 +116,7 @@ VERSION:
 	initialRating = cli.Uint64Flag{
 		Name:  "initial-rating",
 		Usage: "The initial rating to be used for each node",
-		Value: 50,
+		Value: 5000001,
 	}
 	hysteresis = cli.Float64Flag{
 		Name: "hysteresis",
