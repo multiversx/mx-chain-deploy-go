@@ -151,12 +151,12 @@ VERSION:
 	delegationInitString = cli.StringFlag{
 		Name:  "delegation-init",
 		Usage: "defines the delegation init string, something like '%auction_sc_address%@03E8@03E8@03E8'",
-		Value: "%auction_sc_address%@03E8@03E8@03E8",
+		Value: "%auction_sc_address%@03E8@00@030D40@030D40",
 	}
 	delegationVersionString = cli.StringFlag{
 		Name:  "delegation-version",
 		Usage: "defines the delegation SC version",
-		Value: "0.3.*",
+		Value: "0.4.*",
 	}
 
 	walletKeyFileName            = "./walletKey.pem"
