@@ -800,7 +800,6 @@ func generateBlockchainHook(converter core.PubkeyConverter) (process.BlockChainH
 
 func prepareOutputDirectory(outputDirectory string) error {
 	_, err := os.Stat(outputDirectory)
-
 	if os.IsNotExist(err) {
 		return os.MkdirAll(outputDirectory, 0755)
 	}
