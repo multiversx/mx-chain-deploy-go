@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 
 	logger "github.com/ElrondNetwork/elrond-go-logger"
@@ -53,6 +54,11 @@ VERSION:
    {{.Version}}
    {{end}}
 `
+	outputDirectoryFlag = cli.StringFlag{
+		Name:  "output-directory",
+		Usage: "specifies the directory where all files will be saved",
+		Value: "./output",
+	}
 	txSignKeyFormat = cli.StringFlag{
 		Name:  "tx-sign-key-format",
 		Usage: "This flag specifies the format for transactions sign keys",
@@ -146,7 +152,7 @@ VERSION:
 		Name: "stake-type",
 		Usage: "defines the 2 possible ways to stake the nodes: 'direct' as in direct staking " +
 			"and 'delegated' that will stake the nodes through delegation",
-		Value: "direct",
+		Value: "delegated",
 	}
 	delegationInitString = cli.StringFlag{
 		Name:  "delegation-init",
@@ -159,13 +165,13 @@ VERSION:
 		Value: "0.4.*",
 	}
 
-	walletKeyFileName            = "./walletKey.pem"
-	delegationWalletKeyFileName  = "./delegationWalletKey.pem"
-	validatorKeyFileName         = "./validatorKey.pem"
-	genesisFilename              = "./genesis.json"
-	nodesSetupFilename           = "./nodesSetup.json"
-	txgenAccountsFileName        = "./accounts.json"
-	genesisSmartContactsFileName = "./genesisSmartContracts.json"
+	walletKeyFileName            = "walletKey.pem"
+	delegationWalletKeyFileName  = "delegationWalletKey.pem"
+	validatorKeyFileName         = "validatorKey.pem"
+	genesisFilename              = "genesis.json"
+	nodesSetupFilename           = "nodesSetup.json"
+	txgenAccountsFileName        = "accounts.json"
+	genesisSmartContactsFileName = "genesisSmartContracts.json"
 
 	delegationScFileName = "./config/genesisContracts/delegation.wasm"
 	vmType               = "0500"
@@ -202,6 +208,7 @@ func main() {
 	app.Usage = "This binary will generate a initialBalancesSk.pem, initialNodesSk.pem, genesis.json and nodesSetup.json" +
 		" files, to be used in mass deployment"
 	app.Flags = []cli.Flag{
+		outputDirectoryFlag,
 		txSignKeyFormat,
 		blockSignKeyFormat,
 		totalSupply,
@@ -264,6 +271,7 @@ func generateFiles(ctx *cli.Context) error {
 	var err error
 
 	startTime := time.Now()
+	outputDirectory := ctx.GlobalString(outputDirectoryFlag.Name)
 	txSignKeyFormatValue := ctx.GlobalString(txSignKeyFormat.Name)
 	blockSignKeyFormatValue := ctx.GlobalString(blockSignKeyFormat.Name)
 	numOfShards := ctx.GlobalInt(numOfShards.Name)
@@ -280,6 +288,11 @@ func generateFiles(ctx *cli.Context) error {
 	chainID := ctx.GlobalString(chainID.Name)
 	txVersion := ctx.GlobalUint(transactionVersion.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
+
+	err = prepareOutputDirectory(outputDirectory)
+	if err != nil {
+		return err
+	}
 
 	pubKeyConverterTxs, errPkC := factory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32, // TODO: use a constant after it is defined in elrond-go
@@ -356,34 +369,34 @@ func generateFiles(ctx *cli.Context) error {
 		closeFile(genesisSCFile)
 	}()
 
-	walletKeyFile, err = createNewFile(walletKeyFileName)
+	walletKeyFile, err = createNewFile(outputDirectory, walletKeyFileName)
 	if err != nil {
 		return err
 	}
 
-	validatorKeyFile, err = createNewFile(validatorKeyFileName)
+	validatorKeyFile, err = createNewFile(outputDirectory, validatorKeyFileName)
 	if err != nil {
 		return err
 	}
 
-	genesisFile, err = createNewFile(genesisFilename)
+	genesisFile, err = createNewFile(outputDirectory, genesisFilename)
 	if err != nil {
 		return err
 	}
 
-	nodesFile, err = createNewFile(nodesSetupFilename)
+	nodesFile, err = createNewFile(outputDirectory, nodesSetupFilename)
 	if err != nil {
 		return err
 	}
 
 	if generateTxgenFile {
-		txgenAccountsFile, err = createNewFile(txgenAccountsFileName)
+		txgenAccountsFile, err = createNewFile(outputDirectory, txgenAccountsFileName)
 		if err != nil {
 			return err
 		}
 	}
 
-	genesisSCFile, err = createNewFile(genesisSmartContactsFileName)
+	genesisSCFile, err = createNewFile(outputDirectory, genesisSmartContactsFileName)
 	if err != nil {
 		return err
 	}
@@ -446,7 +459,7 @@ func generateFiles(ctx *cli.Context) error {
 	delegationValue := big.NewInt(0)
 	stakedValue := big.NewInt(0).Set(nodePriceValue)
 	if stakeTypeString == delegatedStakeType {
-		delegationWalletKeyFile, err = createNewFile(delegationWalletKeyFileName)
+		delegationWalletKeyFile, err = createNewFile(outputDirectory, delegationWalletKeyFileName)
 		if err != nil {
 			return err
 		}
@@ -724,13 +737,14 @@ func closeFile(f *os.File) {
 	}
 }
 
-func createNewFile(filename string) (*os.File, error) {
-	err := os.Remove(filename)
+func createNewFile(outputDirectory string, fileName string) (*os.File, error) {
+	filePath := filepath.Join(outputDirectory, fileName)
+	err := os.Remove(filePath)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	return os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0666)
+	return os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0666)
 }
 
 func writeDataInFile(file *os.File, data interface{}) error {
@@ -782,4 +796,14 @@ func generateBlockchainHook(converter core.PubkeyConverter) (process.BlockChainH
 	}
 
 	return hooks.NewBlockChainHookImpl(arg)
+}
+
+func prepareOutputDirectory(outputDirectory string) error {
+	_, err := os.Stat(outputDirectory)
+
+	if os.IsNotExist(err) {
+		return os.MkdirAll(outputDirectory, 0755)
+	}
+
+	return nil
 }
