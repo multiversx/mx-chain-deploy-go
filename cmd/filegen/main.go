@@ -158,6 +158,11 @@ VERSION:
 		Usage: "defines the delegation SC version",
 		Value: "0.4.*",
 	}
+	numDelegators = cli.UintFlag{
+		Name:  "num-delegators",
+		Usage: "number of delegators if the stake-type is of type `delegated`",
+		Value: 100,
+	}
 
 	walletKeyFileName            = "./walletKey.pem"
 	delegationWalletKeyFileName  = "./delegationWalletKey.pem"
@@ -166,6 +171,7 @@ VERSION:
 	nodesSetupFilename           = "./nodesSetup.json"
 	txgenAccountsFileName        = "./accounts.json"
 	genesisSmartContactsFileName = "./genesisSmartContracts.json"
+	delegatorsFileName           = "./delegators.pem"
 
 	delegationScFileName = "./config/genesisContracts/delegation.wasm"
 	vmType               = "0500"
@@ -177,7 +183,8 @@ VERSION:
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 	errCreatingKeygen        = errors.New("cannot create key gen")
 
-	log = logger.GetOrCreate("main")
+	log  = logger.GetOrCreate("main")
+	zero = big.NewInt(0)
 )
 
 type txgenAccount struct {
@@ -194,7 +201,6 @@ type txgenAccount struct {
 // The 2 optional flags are used to specify how many private/public keys to generate and the initial minting for each
 // public generated key
 func main() {
-	_ = logger.SetLogLevel("*:DEBUG")
 	app := cli.NewApp()
 	cli.AppHelpTemplate = fileGenHelpTemplate
 	app.Name = "Deploy Preparation Tool"
@@ -223,6 +229,7 @@ func main() {
 		stakeType,
 		delegationInitString,
 		delegationVersionString,
+		numDelegators,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -280,6 +287,10 @@ func generateFiles(ctx *cli.Context) error {
 	chainID := ctx.GlobalString(chainID.Name)
 	txVersion := ctx.GlobalUint(transactionVersion.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
+	numDelegatorsValue := ctx.GlobalUint(numDelegators.Name)
+	if numDelegatorsValue == 0 {
+		return fmt.Errorf("can not have 0 delegators")
+	}
 
 	pubKeyConverterTxs, errPkC := factory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32, // TODO: use a constant after it is defined in elrond-go
@@ -342,6 +353,7 @@ func generateFiles(ctx *cli.Context) error {
 		nodesFile               *os.File
 		txgenAccountsFile       *os.File
 		genesisSCFile           *os.File
+		delegatorsFile          *os.File
 		suite                   crypto.Suite
 		balancesKeyGenerator    crypto.KeyGenerator
 	)
@@ -354,6 +366,7 @@ func generateFiles(ctx *cli.Context) error {
 		closeFile(nodesFile)
 		closeFile(txgenAccountsFile)
 		closeFile(genesisSCFile)
+		closeFile(delegatorsFile)
 	}()
 
 	walletKeyFile, err = createNewFile(walletKeyFileName)
@@ -388,7 +401,7 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
-	genesisList := make([]*data.InitialAccount, 0, totalAddressesWithBalances)
+	genesisList := make([]*data.InitialAccount, 0)
 	initialSC := make([]*data.InitialSmartContract, 0)
 
 	var initialNodes []*sharding.InitialNode
@@ -428,25 +441,29 @@ func generateFiles(ctx *cli.Context) error {
 	initialNodeBalance := big.NewInt(0).Set(initialTotalBalance)
 	initialNodeBalance.Div(initialNodeBalance,
 		big.NewInt(int64(totalAddressesWithBalances+numOfAdditionalAccounts)))
-	log.Debug("supply values",
+	log.Info("supply values",
 		"total supply", totalSupplyValue.String(),
 		"staked", staked.String(),
 		"initial total balance", initialTotalBalance.String(),
+		"initial node balance", initialNodeBalance.String(),
 	)
-	log.Debug("nodes",
+	log.Info("nodes",
 		"num nodes with balance", totalAddressesWithBalances,
 		"num additional accounts", numOfAdditionalAccounts,
 		"num validators", numValidators,
 		"num observers", numObservers,
-		"initial node balance", initialNodeBalance.String(),
 	)
 
 	stakeTypeString := ctx.GlobalString(stakeType.Name)
 	delegationScAddress := ""
-	delegationValue := big.NewInt(0)
 	stakedValue := big.NewInt(0).Set(nodePriceValue)
 	if stakeTypeString == delegatedStakeType {
 		delegationWalletKeyFile, err = createNewFile(delegationWalletKeyFileName)
+		if err != nil {
+			return err
+		}
+
+		delegatorsFile, err = createNewFile(delegatorsFileName)
 		if err != nil {
 			return err
 		}
@@ -467,7 +484,6 @@ func generateFiles(ctx *cli.Context) error {
 		}
 
 		stakedValue = big.NewInt(0)
-		delegationValue = big.NewInt(0).Set(nodePriceValue)
 
 		initParameters := ctx.GlobalString(delegationInitString.Name)
 		version := ctx.GlobalString(delegationVersionString.Name)
@@ -480,6 +496,51 @@ func generateFiles(ctx *cli.Context) error {
 			Type:           scType,
 			Version:        version,
 		})
+
+		totalDelegationNeeded := big.NewInt(int64(numValidators))
+		totalDelegationNeeded.Mul(totalDelegationNeeded, nodePriceValue)
+		delegatorValue := big.NewInt(0).Set(totalDelegationNeeded)
+		delegatorValue.Div(delegatorValue, big.NewInt(int64(numDelegatorsValue)))
+
+		remainder := computeRemainder(totalDelegationNeeded, int(numDelegatorsValue), delegatorValue)
+
+		log.Info("delegators info",
+			"total delegation needed", totalDelegationNeeded.String(),
+			"num delegators", numDelegatorsValue,
+			"delegator value", delegatorValue.String(),
+			"remainder", remainder.String(),
+		)
+
+		for i := uint(0); i < numDelegatorsValue; i++ {
+			pk, sk, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+			if err != nil {
+				return err
+			}
+
+			err = core.SaveSkToPemFile(delegatorsFile, pk, sk)
+			if err != nil {
+				return err
+			}
+
+			ia := &data.InitialAccount{
+				Address:      pk,
+				Supply:       big.NewInt(0).Set(delegatorValue),
+				Balance:      big.NewInt(0),
+				StakingValue: stakedValue,
+				Delegation: &data.DelegationData{
+					Address: delegationScAddress,
+					Value:   big.NewInt(0).Set(delegatorValue),
+				},
+			}
+
+			if i == 0 {
+				//treat the remainder on the first delegator
+				ia.Supply.Add(ia.Supply, remainder)
+				ia.Delegation.Value.Add(ia.Delegation.Value, remainder)
+			}
+
+			genesisList = append(genesisList, ia)
+		}
 	}
 
 	initialSC = append(initialSC, &data.InitialSmartContract{
@@ -500,7 +561,6 @@ func generateFiles(ctx *cli.Context) error {
 			pubKeyConverterTxs,
 			pubKeyConverterBlocks,
 			initialNodeBalance,
-			delegationValue,
 			stakedValue,
 			delegationScAddress,
 			walletKeyFile,
@@ -538,20 +598,20 @@ func generateFiles(ctx *cli.Context) error {
 		genesisList = append(genesisList, ia)
 	}
 
-	//take the remainder and set it on the first node
-	// initialBalance = initialTotalBalance - (totalAddressesWithBalances + numOfAdditionalAccounts - 1) * initialNodeBalance
-	firstInitialAccount := genesisList[0]
-	initialBalance := big.NewInt(0).Set(initialNodeBalance)
-	subs := big.NewInt(int64(totalAddressesWithBalances+numOfAdditionalAccounts) - 1)
-	subs.Mul(subs, big.NewInt(0).Set(initialNodeBalance))
-	initialBalance = big.NewInt(0).Set(initialTotalBalance)
-	initialBalance.Sub(initialBalance, subs)
+	remainder := computeRemainder(
+		initialTotalBalance,
+		totalAddressesWithBalances+numOfAdditionalAccounts,
+		initialNodeBalance,
+	)
 
-	firstInitialAccount.Balance = big.NewInt(0).Set(initialBalance)
-	supply := big.NewInt(0).Set(initialBalance)
-	supply.Add(supply, firstInitialAccount.StakingValue)
-	supply.Add(supply, firstInitialAccount.Delegation.Value)
-	firstInitialAccount.Supply = supply
+	firstInitialAccount := genesisList[0]
+	firstInitialAccount.Supply.Add(firstInitialAccount.Supply, remainder)
+	firstInitialAccount.Balance.Add(firstInitialAccount.Balance, remainder)
+
+	err = checkValues(genesisList, totalSupplyValue)
+	if err != nil {
+		return err
+	}
 
 	err = writeDataInFile(genesisFile, genesisList)
 	if err != nil {
@@ -575,7 +635,7 @@ func generateFiles(ctx *cli.Context) error {
 		return err
 	}
 
-	log.Info("elapsed time in seconds", time.Since(startTime).Seconds())
+	log.Info("elapsed time", "value", time.Since(startTime))
 	log.Info("files generated successfully!")
 	return nil
 }
@@ -585,7 +645,6 @@ func createInitialAccount(
 	pubKeyConverterTxs core.PubkeyConverter,
 	pubKeyConverterBlocks core.PubkeyConverter,
 	initialNodeBalance *big.Int,
-	delegationValue *big.Int,
 	stakedValue *big.Int,
 	delegationScAddress string,
 	walletKeyFile *os.File,
@@ -601,7 +660,6 @@ func createInitialAccount(
 	}
 
 	supply := big.NewInt(0).Set(big.NewInt(0).Set(initialNodeBalance))
-	supply.Add(supply, delegationValue)
 	supply.Add(supply, stakedValue)
 	ia := &data.InitialAccount{
 		Address:      pkString,
@@ -609,8 +667,8 @@ func createInitialAccount(
 		Balance:      big.NewInt(0).Set(initialNodeBalance),
 		StakingValue: stakedValue,
 		Delegation: &data.DelegationData{
-			Address: delegationScAddress,
-			Value:   delegationValue,
+			Address: "",
+			Value:   big.NewInt(0),
 		},
 	}
 
@@ -782,4 +840,61 @@ func generateBlockchainHook(converter core.PubkeyConverter) (process.BlockChainH
 	}
 
 	return hooks.NewBlockChainHookImpl(arg)
+}
+
+func computeRemainder(total *big.Int, numUnit int, valPerUnit *big.Int) *big.Int {
+	subs := big.NewInt(int64(numUnit))
+	subs.Mul(subs, valPerUnit)
+	remainder := big.NewInt(0).Set(total)
+	remainder.Sub(remainder, subs)
+
+	return remainder
+}
+
+func checkValues(genesisList []*data.InitialAccount, totalSupplyValue *big.Int) error {
+	supply := big.NewInt(0)
+	staked := big.NewInt(0)
+	balance := big.NewInt(0)
+	delegation := big.NewInt(0)
+	for idx, ia := range genesisList {
+		supply.Add(supply, ia.Supply)
+		staked.Add(staked, ia.StakingValue)
+		balance.Add(balance, ia.Balance)
+		delegation.Add(delegation, ia.Delegation.Value)
+
+		accountSupply := big.NewInt(0).Set(ia.Supply)
+		accountSupply.Sub(accountSupply, ia.StakingValue)
+		accountSupply.Sub(accountSupply, ia.Balance)
+		accountSupply.Sub(accountSupply, ia.Delegation.Value)
+
+		if accountSupply.Cmp(zero) != 0 {
+			return fmt.Errorf("error generation account (supply mismatch), "+
+				"index %d, address %s, supply %s, staked %s, balance %s, delegated %s",
+				idx, ia.Address, ia.Supply, ia.StakingValue, ia.Balance, ia.Delegation.Value)
+		}
+	}
+
+	supplyCopy := big.NewInt(0).Set(supply)
+	supplyCopy.Sub(supplyCopy, staked)
+	supplyCopy.Sub(supplyCopy, balance)
+	supplyCopy.Sub(supplyCopy, delegation)
+
+	if supplyCopy.Cmp(zero) != 0 {
+		return fmt.Errorf("supply does not match supply %s, staked %s, balance %s, delegated %s",
+			supply.String(), staked.String(), balance.String(), delegation.String())
+	}
+
+	if supply.Cmp(totalSupplyValue) != 0 {
+		return fmt.Errorf("supply does not match expected %s, got %s",
+			totalSupplyValue.String(), supply.String())
+	}
+
+	log.Info("values",
+		"total supply", supply.String(),
+		"total staked", staked.String(),
+		"total balance", balance.String(),
+		"total delegated", delegation.String(),
+	)
+
+	return nil
 }
