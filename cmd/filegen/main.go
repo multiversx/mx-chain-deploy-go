@@ -805,5 +805,5 @@ func prepareOutputDirectory(outputDirectory string) error {
 		return os.MkdirAll(outputDirectory, 0755)
 	}
 
-	return nil
+	return err
 }
