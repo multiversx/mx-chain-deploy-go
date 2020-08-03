@@ -152,7 +152,7 @@ VERSION:
 		Name: "stake-type",
 		Usage: "defines the 2 possible ways to stake the nodes: 'direct' as in direct staking " +
 			"and 'delegated' that will stake the nodes through delegation",
-		Value: "delegated",
+		Value: "direct",
 	}
 	delegationInitString = cli.StringFlag{
 		Name:  "delegation-init",
