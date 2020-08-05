@@ -183,8 +183,9 @@ VERSION:
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
 	errCreatingKeygen        = errors.New("cannot create key gen")
 
-	log  = logger.GetOrCreate("main")
-	zero = big.NewInt(0)
+	log                         = logger.GetOrCreate("main")
+	zero                        = big.NewInt(0)
+	initialBalanceForDelegators = big.NewInt(1000000000000000000) //1eGLD
 )
 
 type txgenAccount struct {
@@ -432,10 +433,13 @@ func generateFiles(ctx *cli.Context) error {
 	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 	numValidators := totalAddressesWithBalances - numObservers
 
-	//initialTotalBalance = totalSupply - (numValidators * nodePriceValue)
+	//initialTotalBalance = totalSupply - (numValidators * nodePriceValue) - (numDelegators * initialBalanceForDelegators)
 	initialTotalBalance := big.NewInt(0).Set(totalSupplyValue)
 	staked := big.NewInt(0).Mul(big.NewInt(int64(numValidators)), nodePriceValue)
 	initialTotalBalance.Sub(initialTotalBalance, staked)
+	totalDelegatorsBalance := big.NewInt(0).Set(initialBalanceForDelegators)
+	totalDelegatorsBalance.Mul(totalDelegatorsBalance, big.NewInt(int64(numDelegatorsValue)))
+	initialTotalBalance.Sub(initialTotalBalance, totalDelegatorsBalance)
 
 	// initialNodeBalance = initialTotalBalance / (totalAddressesWithBalances + numOfAdditionalAccounts)
 	initialNodeBalance := big.NewInt(0).Set(initialTotalBalance)
@@ -497,49 +501,20 @@ func generateFiles(ctx *cli.Context) error {
 			Version:        version,
 		})
 
-		totalDelegationNeeded := big.NewInt(int64(numValidators))
-		totalDelegationNeeded.Mul(totalDelegationNeeded, nodePriceValue)
-		delegatorValue := big.NewInt(0).Set(totalDelegationNeeded)
-		delegatorValue.Div(delegatorValue, big.NewInt(int64(numDelegatorsValue)))
-
-		remainder := computeRemainder(totalDelegationNeeded, int(numDelegatorsValue), delegatorValue)
-
-		log.Info("delegators info",
-			"total delegation needed", totalDelegationNeeded.String(),
-			"num delegators", numDelegatorsValue,
-			"delegator value", delegatorValue.String(),
-			"remainder", remainder.String(),
+		genesisList, err = manageDelegators(
+			genesisList,
+			numValidators,
+			nodePriceValue,
+			numDelegatorsValue,
+			balancesKeyGenerator,
+			pubKeyConverterTxs,
+			delegatorsFile,
+			stakedValue,
+			delegationScAddress,
+			initialBalanceForDelegators,
 		)
-
-		for i := uint(0); i < numDelegatorsValue; i++ {
-			pk, sk, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
-			if err != nil {
-				return err
-			}
-
-			err = core.SaveSkToPemFile(delegatorsFile, pk, sk)
-			if err != nil {
-				return err
-			}
-
-			ia := &data.InitialAccount{
-				Address:      pk,
-				Supply:       big.NewInt(0).Set(delegatorValue),
-				Balance:      big.NewInt(0),
-				StakingValue: stakedValue,
-				Delegation: &data.DelegationData{
-					Address: delegationScAddress,
-					Value:   big.NewInt(0).Set(delegatorValue),
-				},
-			}
-
-			if i == 0 {
-				//treat the remainder on the first delegator
-				ia.Supply.Add(ia.Supply, remainder)
-				ia.Delegation.Value.Add(ia.Delegation.Value, remainder)
-			}
-
-			genesisList = append(genesisList, ia)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -897,4 +872,66 @@ func checkValues(genesisList []*data.InitialAccount, totalSupplyValue *big.Int) 
 	)
 
 	return nil
+}
+
+func manageDelegators(
+	genesisList []*data.InitialAccount,
+	numValidators int,
+	nodePrice *big.Int,
+	numDelegators uint,
+	balancesKeyGenerator crypto.KeyGenerator,
+	pubKeyConverterTxs core.PubkeyConverter,
+	delegatorsFile *os.File,
+	stakedValue *big.Int,
+	delegationScAddress string,
+	initialBalanceForDelegators *big.Int,
+) ([]*data.InitialAccount, error) {
+	totalDelegationNeeded := big.NewInt(int64(numValidators))
+	totalDelegationNeeded.Mul(totalDelegationNeeded, nodePrice)
+	delegatorValue := big.NewInt(0).Set(totalDelegationNeeded)
+	delegatorValue.Div(delegatorValue, big.NewInt(int64(numDelegators)))
+
+	remainder := computeRemainder(totalDelegationNeeded, int(numDelegators), delegatorValue)
+
+	log.Info("delegators info",
+		"total delegation needed", totalDelegationNeeded.String(),
+		"num delegators", numDelegators,
+		"delegator value", delegatorValue.String(),
+		"remainder", remainder.String(),
+	)
+
+	for i := uint(0); i < numDelegators; i++ {
+		pk, sk, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
+		if err != nil {
+			return nil, err
+		}
+
+		err = core.SaveSkToPemFile(delegatorsFile, pk, sk)
+		if err != nil {
+			return nil, err
+		}
+
+		ia := &data.InitialAccount{
+			Address:      pk,
+			Supply:       big.NewInt(0).Set(delegatorValue),
+			Balance:      big.NewInt(0),
+			StakingValue: stakedValue,
+			Delegation: &data.DelegationData{
+				Address: delegationScAddress,
+				Value:   big.NewInt(0).Set(delegatorValue),
+			},
+		}
+		ia.Supply.Add(ia.Supply, initialBalanceForDelegators)
+		ia.Balance.Add(ia.Balance, initialBalanceForDelegators)
+
+		if i == 0 {
+			//treat the remainder on the first delegator
+			ia.Supply.Add(ia.Supply, remainder)
+			ia.Delegation.Value.Add(ia.Delegation.Value, remainder)
+		}
+
+		genesisList = append(genesisList, ia)
+	}
+
+	return genesisList, nil
 }
