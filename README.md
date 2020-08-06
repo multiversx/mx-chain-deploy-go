@@ -22,7 +22,7 @@ $ ./filegen -stake-type direct -node-price 2500000000000000000000 -total-supply 
  ### To run in "delegated" staking mode, please run this:
  ```
  $ go build
-$ ./filegen -stake-type delegated -node-price 2500000000000000000000 -total-supply 20000000000000000000000000 -num-of-shards 5 -num-of-nodes-in-each-shard 21 -consensus-group-size 15 -num-of-observers-in-each-shard 1 -num-of-metachain-nodes 21 -metachain-consensus-group-size 15 -num-of-observers-in-metachain 1 -chain-id testnet -hysteresis 0.0
+$ ./filegen -stake-type delegated -node-price 2500000000000000000000 -total-supply 20000000000000000000000000 -num-of-shards 5 -num-of-nodes-in-each-shard 21 -consensus-group-size 15 -num-of-observers-in-each-shard 1 -num-of-metachain-nodes 21 -metachain-consensus-group-size 15 -num-of-observers-in-metachain 1 -chain-id testnet -hysteresis 0.0 -num-delegators 1293
  ```
 
 In the "delegated" mode the  initial staking will be done through the delegation SC. When set to "delegated" mode, there are 
