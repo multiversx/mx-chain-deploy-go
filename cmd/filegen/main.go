@@ -34,7 +34,7 @@ const defaultRoundDuration = 5000
 const dnsPkOwner = "erd16grmckn46ry7fwyvass8e8pz88klazzpc0c5f0pnrv643td4797sgnvjkm"
 const dnsFilename = "./config/genesisContracts/dns.wasm"
 const dnsVmType = "0500"
-const dnsInitParams = "056bc75e2d63100000"
+const dnsInitParams = "00"
 const dnsScType = "dns"
 const dnsVersion = "0.2.*"
 
