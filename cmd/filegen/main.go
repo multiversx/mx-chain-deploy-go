@@ -29,6 +29,7 @@ import (
 )
 
 const delegatedStakeType = "delegated"
+const stakedType = "direct"
 const defaultRoundDuration = 5000
 
 const dnsPkOwner = "erd16grmckn46ry7fwyvass8e8pz88klazzpc0c5f0pnrv643td4797sgnvjkm"
@@ -297,9 +298,6 @@ func generateFiles(ctx *cli.Context) error {
 	txVersion := ctx.GlobalUint(transactionVersion.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
 	numDelegatorsValue := ctx.GlobalUint(numDelegators.Name)
-	if numDelegatorsValue == 0 {
-		return fmt.Errorf("can not have 0 delegators")
-	}
 
 	err = prepareOutputDirectory(outputDirectory)
 	if err != nil {
@@ -446,6 +444,11 @@ func generateFiles(ctx *cli.Context) error {
 	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
 	numValidators := totalAddressesWithBalances - numObservers
 
+	stakeTypeString := ctx.GlobalString(stakeType.Name)
+	if stakeTypeString == stakedType {
+		numDelegatorsValue = 0
+	}
+
 	//initialTotalBalance = totalSupply - (numValidators * nodePriceValue) - (numDelegators * initialBalanceForDelegators)
 	initialTotalBalance := big.NewInt(0).Set(totalSupplyValue)
 	staked := big.NewInt(0).Mul(big.NewInt(int64(numValidators)), nodePriceValue)
@@ -471,10 +474,13 @@ func generateFiles(ctx *cli.Context) error {
 		"num observers", numObservers,
 	)
 
-	stakeTypeString := ctx.GlobalString(stakeType.Name)
 	delegationScAddress := ""
 	stakedValue := big.NewInt(0).Set(nodePriceValue)
 	if stakeTypeString == delegatedStakeType {
+		if numDelegatorsValue == 0 {
+			return fmt.Errorf("can not have 0 delegators")
+		}
+
 		delegationWalletKeyFile, err = createNewFile(outputDirectory, delegationWalletKeyFileName)
 		if err != nil {
 			return err
