@@ -37,7 +37,7 @@ const dnsFilename = "./config/genesisContracts/dns.wasm"
 const dnsVmType = "0500"
 const dnsInitParams = "00"
 const dnsScType = "dns"
-const dnsVersion = "0.2.*"
+const dnsVersion = "0.3.*"
 
 var (
 	fileGenHelpTemplate = `NAME:
