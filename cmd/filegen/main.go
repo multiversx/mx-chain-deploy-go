@@ -32,13 +32,6 @@ const delegatedStakeType = "delegated"
 const stakedType = "direct"
 const defaultRoundDuration = 5000
 
-const dnsPkOwner = "erd16grmckn46ry7fwyvass8e8pz88klazzpc0c5f0pnrv643td4797sgnvjkm"
-const dnsFilename = "./config/genesisContracts/dns.wasm"
-const dnsVmType = "0500"
-const dnsInitParams = "00"
-const dnsScType = "dns"
-const dnsVersion = "0.3.*"
-
 var (
 	fileGenHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
@@ -155,15 +148,10 @@ VERSION:
 			"and 'delegated' that will stake the nodes through delegation",
 		Value: "direct",
 	}
-	delegationInitString = cli.StringFlag{
-		Name:  "delegation-init",
-		Usage: "defines the delegation init string, something like '%auction_sc_address%@03E8@03E8@03E8'",
-		Value: "%auction_sc_address%@03E8@00@030D40@030D40",
-	}
-	delegationVersionString = cli.StringFlag{
-		Name:  "delegation-version",
-		Usage: "defines the delegation SC version",
-		Value: "0.4.*",
+	delegationOwnerPublicKey = cli.StringFlag{
+		Name:  "delegation-owner-pk",
+		Usage: "defines the delegation owner public key, encoded in bech32 format",
+		Value: "erd1vxy22x0fj4zv6hktmydg8vpfh6euv02cz4yg0aaws6rrad5a5awqgqky80",
 	}
 	numDelegators = cli.UintFlag{
 		Name:  "num-delegators",
@@ -171,19 +159,14 @@ VERSION:
 		Value: 100,
 	}
 
-	walletKeyFileName            = "walletKey.pem"
-	delegationWalletKeyFileName  = "delegationWalletKey.pem"
-	validatorKeyFileName         = "validatorKey.pem"
-	genesisFilename              = "genesis.json"
-	nodesSetupFilename           = "nodesSetup.json"
-	txgenAccountsFileName        = "accounts.json"
-	genesisSmartContactsFileName = "genesisSmartContracts.json"
-	delegatorsFileName           = "delegators.pem"
-
-	delegationScFileName = "./config/genesisContracts/delegation.wasm"
-	vmType               = "0500"
-	scType               = "delegation"
-	ownerNonce           = uint64(0)
+	walletKeyFileName     = "walletKey.pem"
+	validatorKeyFileName  = "validatorKey.pem"
+	genesisFilename       = "genesis.json"
+	nodesSetupFilename    = "nodesSetup.json"
+	txgenAccountsFileName = "accounts.json"
+	delegatorsFileName    = "delegators.pem"
+	vmType                = "0500"
+	delegationOwnerNonce  = uint64(0)
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidMintValue      = errors.New("invalid mint value for generated public keys")
@@ -236,8 +219,7 @@ func main() {
 		transactionVersion,
 		txgenFile,
 		stakeType,
-		delegationInitString,
-		delegationVersionString,
+		delegationOwnerPublicKey,
 		numDelegators,
 	}
 	app.Authors = []cli.Author{
@@ -358,26 +340,22 @@ func generateFiles(ctx *cli.Context) error {
 	}
 
 	var (
-		delegationWalletKeyFile *os.File
-		walletKeyFile           *os.File
-		validatorKeyFile        *os.File
-		genesisFile             *os.File
-		nodesFile               *os.File
-		txgenAccountsFile       *os.File
-		genesisSCFile           *os.File
-		delegatorsFile          *os.File
-		suite                   crypto.Suite
-		balancesKeyGenerator    crypto.KeyGenerator
+		walletKeyFile        *os.File
+		validatorKeyFile     *os.File
+		genesisFile          *os.File
+		nodesFile            *os.File
+		txgenAccountsFile    *os.File
+		delegatorsFile       *os.File
+		suite                crypto.Suite
+		balancesKeyGenerator crypto.KeyGenerator
 	)
 
 	defer func() {
-		closeFile(delegationWalletKeyFile)
 		closeFile(walletKeyFile)
 		closeFile(validatorKeyFile)
 		closeFile(genesisFile)
 		closeFile(nodesFile)
 		closeFile(txgenAccountsFile)
-		closeFile(genesisSCFile)
 		closeFile(delegatorsFile)
 	}()
 
@@ -408,13 +386,7 @@ func generateFiles(ctx *cli.Context) error {
 		}
 	}
 
-	genesisSCFile, err = createNewFile(outputDirectory, genesisSmartContactsFileName)
-	if err != nil {
-		return err
-	}
-
 	genesisList := make([]*data.InitialAccount, 0)
-	initialSC := make([]*data.InitialSmartContract, 0)
 
 	var initialNodes []*sharding.InitialNode
 	nodes := &sharding.NodesSetup{
@@ -481,44 +453,17 @@ func generateFiles(ctx *cli.Context) error {
 			return fmt.Errorf("can not have 0 delegators")
 		}
 
-		delegationWalletKeyFile, err = createNewFile(outputDirectory, delegationWalletKeyFileName)
-		if err != nil {
-			return err
-		}
-
 		delegatorsFile, err = createNewFile(outputDirectory, delegatorsFileName)
 		if err != nil {
 			return err
 		}
 
-		pkStringDelegator, skDelegator, err := getIdentifierAndPrivateKey(balancesKeyGenerator, pubKeyConverterTxs)
-		if err != nil {
-			return err
-		}
-
-		err = core.SaveSkToPemFile(delegationWalletKeyFile, pkStringDelegator, skDelegator)
-		if err != nil {
-			return err
-		}
-
-		delegationScAddress, err = generateScDelegationAddress(pkStringDelegator, pubKeyConverterTxs)
+		delegationScAddress, err = generateScDelegationAddress(ctx.GlobalString(delegationOwnerPublicKey.Name), pubKeyConverterTxs)
 		if err != nil {
 			return fmt.Errorf("%w when generationg resulted delegation address", err)
 		}
 
 		stakedValue = big.NewInt(0)
-
-		initParameters := ctx.GlobalString(delegationInitString.Name)
-		version := ctx.GlobalString(delegationVersionString.Name)
-
-		initialSC = append(initialSC, &data.InitialSmartContract{
-			Owner:          pkStringDelegator,
-			Filename:       delegationScFileName,
-			VmType:         vmType,
-			InitParameters: initParameters,
-			Type:           scType,
-			Version:        version,
-		})
 
 		genesisList, err = manageDelegators(
 			genesisList,
@@ -536,15 +481,6 @@ func generateFiles(ctx *cli.Context) error {
 			return err
 		}
 	}
-
-	initialSC = append(initialSC, &data.InitialSmartContract{
-		Owner:          dnsPkOwner,
-		Filename:       dnsFilename,
-		VmType:         dnsVmType,
-		InitParameters: dnsInitParams,
-		Type:           dnsScType,
-		Version:        dnsVersion,
-	})
 
 	log.Info("started generating...")
 	for i := 0; i < totalAddressesWithBalances; i++ {
@@ -622,11 +558,6 @@ func generateFiles(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-	}
-
-	err = writeDataInFile(genesisSCFile, initialSC)
-	if err != nil {
-		return err
 	}
 
 	log.Info("elapsed time", "value", time.Since(startTime))
@@ -813,7 +744,7 @@ func generateScDelegationAddress(pkString string, converter core.PubkeyConverter
 		return "", err
 	}
 
-	scResultingAddressBytes, err := blockchainHook.NewAddress(pk, ownerNonce, vmTypeBytes)
+	scResultingAddressBytes, err := blockchainHook.NewAddress(pk, delegationOwnerNonce, vmTypeBytes)
 	if err != nil {
 		return "", err
 	}
