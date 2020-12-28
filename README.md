@@ -29,8 +29,13 @@ In the "delegated" mode the  initial staking will be done through the delegation
 2 optional flags `delegation-init` for setting a custom init string and `delegation-version` for setting the correspondent 
 delegation SC version.
 
-Important: if the hysteresis value is greater than 0, the binary will add more nodes as validators in order to 
+### Important: 
+If the hysteresis value is greater than 0, the binary will add more nodes as validators in order to 
 compensate for the nodes in the waiting list. 
+
+### Notes: 
+The optional flag called `-richest-account` can be used in order to increase the first wallet key to almost 
+all available balance left after the staking process occurred. This is helpful when dealing with automated staking scenarios.
 
 ### Running with docker
 ```
