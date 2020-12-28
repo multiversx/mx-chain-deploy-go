@@ -158,6 +158,12 @@ VERSION:
 		Usage: "number of delegators if the stake-type is of type `delegated`",
 		Value: 100,
 	}
+	richestAccount = cli.BoolFlag{
+		Name: "richest-account",
+		Usage: "if this flag is set, all the remaining balance will be credited to a new account. " +
+			"This flag is useful in tests involving automated stake events. All other account will still" +
+			"receive 1eGLD in order to complete some transactions (unstake, for instance)",
+	}
 
 	walletKeyFileName     = "walletKey.pem"
 	validatorKeyFileName  = "validatorKey.pem"
@@ -176,6 +182,7 @@ VERSION:
 	log                         = logger.GetOrCreate("main")
 	zero                        = big.NewInt(0)
 	initialBalanceForDelegators = big.NewInt(1000000000000000000) //1eGLD
+	minimumInitialBalance       = big.NewInt(1000000000000000000) //1eGLD
 )
 
 type txgenAccount struct {
@@ -221,6 +228,7 @@ func main() {
 		stakeType,
 		delegationOwnerPublicKey,
 		numDelegators,
+		richestAccount,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -280,6 +288,7 @@ func generateFiles(ctx *cli.Context) error {
 	txVersion := ctx.GlobalUint(transactionVersion.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
 	numDelegatorsValue := ctx.GlobalUint(numDelegators.Name)
+	withRichestAccount := ctx.GlobalBool(richestAccount.Name)
 
 	err = prepareOutputDirectory(outputDirectory)
 	if err != nil {
@@ -429,10 +438,15 @@ func generateFiles(ctx *cli.Context) error {
 	totalDelegatorsBalance.Mul(totalDelegatorsBalance, big.NewInt(int64(numDelegatorsValue)))
 	initialTotalBalance.Sub(initialTotalBalance, totalDelegatorsBalance)
 
-	// initialNodeBalance = initialTotalBalance / (totalAddressesWithBalances + numOfAdditionalAccounts)
 	initialNodeBalance := big.NewInt(0).Set(initialTotalBalance)
-	initialNodeBalance.Div(initialNodeBalance,
-		big.NewInt(int64(totalAddressesWithBalances+numOfAdditionalAccounts)))
+	richestAccount := big.NewInt(0)
+	totalNodes := big.NewInt(int64(totalAddressesWithBalances + numOfAdditionalAccounts))
+	if !withRichestAccount {
+		// initialNodeBalance = initialTotalBalance / (totalAddressesWithBalances + numOfAdditionalAccounts)
+		initialNodeBalance.Div(initialNodeBalance, totalNodes)
+	} else {
+		initialNodeBalance.Set(minimumInitialBalance)
+	}
 	log.Info("supply values",
 		"total supply", totalSupplyValue.String(),
 		"staked", staked.String(),
@@ -523,6 +537,21 @@ func generateFiles(ctx *cli.Context) error {
 
 		if txGenAccount != nil {
 			txgenAccounts[shardID] = append(txgenAccounts[shardID], txGenAccount)
+		}
+
+		genesisList = append(genesisList, ia)
+	}
+
+	if withRichestAccount {
+		ia, _, _, err := createAdditionalNode(
+			balancesKeyGenerator,
+			pubKeyConverterTxs,
+			richestAccount,
+			shardCoordinator,
+			generateTxgenFile,
+		)
+		if err != nil {
+			return err
 		}
 
 		genesisList = append(genesisList, ia)
