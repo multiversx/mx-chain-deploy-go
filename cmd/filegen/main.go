@@ -439,7 +439,6 @@ func generateFiles(ctx *cli.Context) error {
 	initialTotalBalance.Sub(initialTotalBalance, totalDelegatorsBalance)
 
 	initialNodeBalance := big.NewInt(0).Set(initialTotalBalance)
-	richestAccount := big.NewInt(0)
 	totalNodes := big.NewInt(int64(totalAddressesWithBalances + numOfAdditionalAccounts))
 	if !withRichestAccount {
 		// initialNodeBalance = initialTotalBalance / (totalAddressesWithBalances + numOfAdditionalAccounts)
@@ -537,21 +536,6 @@ func generateFiles(ctx *cli.Context) error {
 
 		if txGenAccount != nil {
 			txgenAccounts[shardID] = append(txgenAccounts[shardID], txGenAccount)
-		}
-
-		genesisList = append(genesisList, ia)
-	}
-
-	if withRichestAccount {
-		ia, _, _, err := createAdditionalNode(
-			balancesKeyGenerator,
-			pubKeyConverterTxs,
-			richestAccount,
-			shardCoordinator,
-			generateTxgenFile,
-		)
-		if err != nil {
-			return err
 		}
 
 		genesisList = append(genesisList, ia)
