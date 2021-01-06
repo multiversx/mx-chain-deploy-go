@@ -1,4 +1,4 @@
-package generating
+package generate
 
 // IntRandomizer interface provides functionality over generating integer numbers
 type IntRandomizer interface {

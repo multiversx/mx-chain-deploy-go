@@ -1,4 +1,4 @@
-package io
+package plugins
 
 import "errors"
 

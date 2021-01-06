@@ -1,4 +1,4 @@
-package generating
+package generate
 
 import (
 	"math/big"

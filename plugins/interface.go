@@ -1,4 +1,4 @@
-package io
+package plugins
 
 // FileHandler describes the file handling capabilities
 type FileHandler interface {

@@ -10,26 +10,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConvertToBigInt_NotANumber(t *testing.T) {
+func TestConvertToPositiveBigInt_NotANumber(t *testing.T) {
 	t.Parallel()
 
-	val, err := ConvertToBigInt("not a number")
+	val, err := ConvertToPositiveBigInt("not a number")
 	assert.Nil(t, val)
 	assert.True(t, errors.Is(err, ErrStringIsNotANumber))
 }
 
-func TestConvertToBigInt_NegativeNumber(t *testing.T) {
+func TestConvertToPositiveBigInt_NegativeNumber(t *testing.T) {
 	t.Parallel()
 
-	val, err := ConvertToBigInt("-1")
+	val, err := ConvertToPositiveBigInt("-1")
 	assert.Nil(t, val)
 	assert.True(t, errors.Is(err, ErrNegativeValue))
 }
 
-func TestConvertToBigInt_ShouldWork(t *testing.T) {
+func TestConvertToPositiveBigInt_ShouldWork(t *testing.T) {
 	t.Parallel()
 
-	val, err := ConvertToBigInt("1")
+	val, err := ConvertToPositiveBigInt("1")
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(1), val)
 }

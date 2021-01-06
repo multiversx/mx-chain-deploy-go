@@ -1,4 +1,4 @@
-package checking
+package check
 
 import "errors"
 
@@ -8,10 +8,10 @@ var ErrNilValue = errors.New("nil value")
 // ErrZeroOrNegative signals that a zero or negative value was provided
 var ErrZeroOrNegative = errors.New("zero or negative value")
 
-// ErrEmptyInitialAccounts signals that an empty initial accounts list
+// ErrEmptyInitialAccounts signals that an empty initial accounts list has been provided
 var ErrEmptyInitialAccounts = errors.New("empty initial accounts list")
 
-// ErrSupplyMismatch signals that the initial account's supply mismatches
+// ErrSupplyMismatch signals that the initial account's supply mismatches between the computed value and generated value
 var ErrSupplyMismatch = errors.New("supply mismatch")
 
 // ErrStakingValueError signals the provided staking value is not a multiple of the node's price
@@ -23,5 +23,5 @@ var ErrNegativeValue = errors.New("negative value")
 // ErrDelegationValues signals that the provided delegation fields were improperly set
 var ErrDelegationValues = errors.New("delegation values error")
 
-// ErrTotalSupplyMismatch signals that the total supply mismatches
+// ErrTotalSupplyMismatch signals that the total supply mismatches between the computed value and generated value
 var ErrTotalSupplyMismatch = errors.New("total supply mismatch")

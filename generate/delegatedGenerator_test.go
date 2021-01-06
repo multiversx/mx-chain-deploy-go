@@ -1,10 +1,10 @@
-package generating
+package generate
 
 import (
 	"math/big"
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/checking"
+	"github.com/ElrondNetwork/elrond-deploy-go/check"
 	"github.com/ElrondNetwork/elrond-go/core/pubkeyConverter"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
@@ -55,15 +55,16 @@ func TestDelegatedStakingGenerator_GenerateShouldWork(t *testing.T) {
 	generatedOutput, err := dsg.Generate()
 	require.Nil(t, err)
 
-	assert.Equal(t, 33, len(generatedOutput.ValidatorBlsKeys))
-	assert.Equal(t, 3, len(generatedOutput.ObserverBlsKeys))
-	assert.Equal(t, 83, len(generatedOutput.InitialAccounts))
-	assert.Equal(t, 33, len(generatedOutput.WalletKeys))
-	assert.Equal(t, 3, len(generatedOutput.AdditionalKeys))
-	assert.Equal(t, 33, len(generatedOutput.InitialNodes))
-	assert.Equal(t, 47, len(generatedOutput.DelegatorKeys))
+	assert.Equal(t, int(arg.NumValidatorBlsKeys), len(generatedOutput.ValidatorBlsKeys))
+	assert.Equal(t, int(arg.NumObserverBlsKeys), len(generatedOutput.ObserverBlsKeys))
+	expectedNumInitialAccounts := arg.NumValidatorBlsKeys + arg.NumObserverBlsKeys + arg.NumDelegators
+	assert.Equal(t, int(expectedNumInitialAccounts), len(generatedOutput.InitialAccounts))
+	assert.Equal(t, int(arg.NumValidatorBlsKeys), len(generatedOutput.WalletKeys))
+	assert.Equal(t, int(arg.NumAdditionalWalletKeys), len(generatedOutput.AdditionalKeys))
+	assert.Equal(t, int(arg.NumValidatorBlsKeys), len(generatedOutput.InitialNodes))
+	assert.Equal(t, int(arg.NumDelegators), len(generatedOutput.DelegatorKeys))
 
-	iac, _ := checking.NewInitialAccountsChecker(arg.NodePrice, arg.TotalSupply)
+	iac, _ := check.NewInitialAccountsChecker(arg.NodePrice, arg.TotalSupply)
 	assert.Nil(t, err, iac.CheckInitialAccounts(generatedOutput.InitialAccounts))
 }
 
@@ -83,15 +84,16 @@ func TestDelegatedStakingGenerator_GenerateWithRichestAccountShouldWork(t *testi
 	generatedOutput, err := dsg.Generate()
 	require.Nil(t, err)
 
-	assert.Equal(t, 33, len(generatedOutput.ValidatorBlsKeys))
-	assert.Equal(t, 3, len(generatedOutput.ObserverBlsKeys))
-	assert.Equal(t, 83, len(generatedOutput.InitialAccounts))
-	assert.Equal(t, 33, len(generatedOutput.WalletKeys))
-	assert.Equal(t, 3, len(generatedOutput.AdditionalKeys))
-	assert.Equal(t, 33, len(generatedOutput.InitialNodes))
-	assert.Equal(t, 47, len(generatedOutput.DelegatorKeys))
+	assert.Equal(t, int(arg.NumValidatorBlsKeys), len(generatedOutput.ValidatorBlsKeys))
+	assert.Equal(t, int(arg.NumObserverBlsKeys), len(generatedOutput.ObserverBlsKeys))
+	expectedNumInitialAccounts := arg.NumValidatorBlsKeys + arg.NumObserverBlsKeys + arg.NumDelegators
+	assert.Equal(t, int(expectedNumInitialAccounts), len(generatedOutput.InitialAccounts))
+	assert.Equal(t, int(arg.NumValidatorBlsKeys), len(generatedOutput.WalletKeys))
+	assert.Equal(t, int(arg.NumAdditionalWalletKeys), len(generatedOutput.AdditionalKeys))
+	assert.Equal(t, int(arg.NumValidatorBlsKeys), len(generatedOutput.InitialNodes))
+	assert.Equal(t, int(arg.NumDelegators), len(generatedOutput.DelegatorKeys))
 
-	iac, _ := checking.NewInitialAccountsChecker(arg.NodePrice, arg.TotalSupply)
+	iac, _ := check.NewInitialAccountsChecker(arg.NodePrice, arg.TotalSupply)
 	assert.Nil(t, err, iac.CheckInitialAccounts(generatedOutput.InitialAccounts))
 	for i, ia := range generatedOutput.InitialAccounts {
 		if i == int(arg.NumDelegators) {

@@ -11,8 +11,9 @@ import (
 	"github.com/ElrondNetwork/elrond-go/process/smartContract/hooks"
 )
 
-// ConvertToBigInt will try to convert the provided string to its big int corresponding value
-func ConvertToBigInt(value string) (*big.Int, error) {
+// ConvertToPositiveBigInt will try to convert the provided string to its big int corresponding value. Only
+// positive numbers are allowed
+func ConvertToPositiveBigInt(value string) (*big.Int, error) {
 	valueNumber, isNumber := big.NewInt(0).SetString(value, 10)
 	if !isNumber {
 		return nil, ErrStringIsNotANumber
@@ -32,7 +33,6 @@ func GenerateSCAddress(
 	vmType string,
 	converter elrondCore.PubkeyConverter,
 ) (string, error) {
-
 	blockchainHook, err := generateBlockchainHook(converter)
 	if err != nil {
 		return "", err

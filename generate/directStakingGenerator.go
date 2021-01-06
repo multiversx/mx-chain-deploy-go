@@ -1,4 +1,4 @@
-package generating
+package generate
 
 import (
 	"fmt"
@@ -180,7 +180,7 @@ func (dsg *directStakingGenerator) computeInitialNode(key *data.WalletKey) []*sh
 	return initialNodes
 }
 
-// IsInterfaceNil returns if underlying object is true
+// IsInterfaceNil returns if underlying object is nil
 func (dsg *directStakingGenerator) IsInterfaceNil() bool {
 	return dsg == nil
 }

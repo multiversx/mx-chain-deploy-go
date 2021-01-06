@@ -1,4 +1,4 @@
-package io
+package plugins
 
 import (
 	"fmt"
@@ -125,7 +125,7 @@ func (oh *outputHandler) writeNodesSetup(
 	return oh.nodesSetupHandler.WriteObjectInFile(nodes)
 }
 
-// writeGenesisFile will write the provided initial accounts in to the genesis file
+// writeGenesisFile will write the provided initial accounts to the genesis file
 func (oh *outputHandler) writeGenesisFile(initialAccounts []elrondData.InitialAccount) error {
 	return oh.genesisHandler.WriteObjectInFile(initialAccounts)
 }
@@ -257,7 +257,7 @@ func (oh *outputHandler) Close() {
 	}
 }
 
-// IsInterfaceNil returns if underlying object is true
+// IsInterfaceNil returns if underlying object is nil
 func (oh *outputHandler) IsInterfaceNil() bool {
 	return oh == nil
 }

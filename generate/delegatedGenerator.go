@@ -1,4 +1,4 @@
-package generating
+package generate
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-deploy-go/generating/disabled"
+	"github.com/ElrondNetwork/elrond-deploy-go/generate/disabled"
 	"github.com/ElrondNetwork/elrond-go-logger/check"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
@@ -226,7 +226,7 @@ func (dsg *delegatedStakingGenerator) computeInitialNodes(validators []*data.Bls
 	return initialNodes
 }
 
-// IsInterfaceNil returns if underlying object is true
+// IsInterfaceNil returns if underlying object is nil
 func (dsg *delegatedStakingGenerator) IsInterfaceNil() bool {
 	return dsg == nil
 }

@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
-	"github.com/ElrondNetwork/elrond-deploy-go/generating"
+	"github.com/ElrondNetwork/elrond-deploy-go/generate"
 	elrondCore "github.com/ElrondNetwork/elrond-go/core"
 	"github.com/ElrondNetwork/elrond-go/crypto"
 )
@@ -21,7 +21,7 @@ type ArgDataGenerator struct {
 	RichestAccountMode        bool
 	MaxNumNodesOnOwner        uint
 	NumAdditionalWalletKeys   uint
-	IntRandomizer             generating.IntRandomizer
+	IntRandomizer             generate.IntRandomizer
 	NodePrice                 *big.Int
 	TotalSupply               *big.Int
 	InitialRating             uint64
@@ -45,7 +45,7 @@ func CreateDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
 }
 
 func stakedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
-	argDirectStaking := generating.ArgDirectStakingGenerator{
+	argDirectStaking := generate.ArgDirectStakingGenerator{
 		KeyGeneratorForValidators: arg.KeyGeneratorForValidators,
 		KeyGeneratorForWallets:    arg.KeyGeneratorForWallets,
 		WalletPubKeyConverter:     arg.WalletPubKeyConverter,
@@ -61,11 +61,11 @@ func stakedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
 		InitialRating:             arg.InitialRating,
 	}
 
-	return generating.NewDirectStakingGenerator(argDirectStaking)
+	return generate.NewDirectStakingGenerator(argDirectStaking)
 }
 
 func delegatedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
-	argDelegatedStaking := generating.ArgDelegatedStakingGenerator{
+	argDelegatedStaking := generate.ArgDelegatedStakingGenerator{
 		KeyGeneratorForValidators: arg.KeyGeneratorForValidators,
 		KeyGeneratorForWallets:    arg.KeyGeneratorForWallets,
 		WalletPubKeyConverter:     arg.WalletPubKeyConverter,
@@ -83,5 +83,5 @@ func delegatedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
 		NumDelegators:             arg.NumDelegators,
 	}
 
-	return generating.NewDelegatedGenerator(argDelegatedStaking)
+	return generate.NewDelegatedGenerator(argDelegatedStaking)
 }

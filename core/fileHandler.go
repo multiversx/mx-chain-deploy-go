@@ -62,7 +62,7 @@ func (fh *fileHandler) Close() {
 	log.LogIfError(err)
 }
 
-// IsInterfaceNil returns if underlying object is true
+// IsInterfaceNil returns if underlying object is nil
 func (fh *fileHandler) IsInterfaceNil() bool {
 	return fh == nil
 }

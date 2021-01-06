@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/checking"
+	"github.com/ElrondNetwork/elrond-deploy-go/check"
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
-	"github.com/ElrondNetwork/elrond-deploy-go/generating/factory"
-	"github.com/ElrondNetwork/elrond-deploy-go/io"
+	"github.com/ElrondNetwork/elrond-deploy-go/generate/factory"
+	"github.com/ElrondNetwork/elrond-deploy-go/plugins"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/ElrondNetwork/elrond-go/config"
 	elrondCore "github.com/ElrondNetwork/elrond-go/core"
@@ -264,13 +264,13 @@ func generate(ctx *cli.Context) error {
 	}
 
 	totalSupplyString := ctx.GlobalString(totalSupply.Name)
-	totalSupplyValue, err := core.ConvertToBigInt(totalSupplyString)
+	totalSupplyValue, err := core.ConvertToPositiveBigInt(totalSupplyString)
 	if err != nil {
 		return err
 	}
 
 	nodePriceString := ctx.GlobalString(nodePrice.Name)
-	nodePriceValue, err := core.ConvertToBigInt(nodePriceString)
+	nodePriceValue, err := core.ConvertToPositiveBigInt(nodePriceString)
 	if err != nil {
 		return err
 	}
@@ -283,7 +283,7 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	argOutputHandler, err := io.CreateOutputHandlerArgument(
+	argOutputHandler, err := plugins.CreateOutputHandlerArgument(
 		outputDirectory,
 		validatorPubKeyConverter,
 		walletPubKeyConverter,
@@ -304,7 +304,7 @@ func generate(ctx *cli.Context) error {
 	argOutputHandler.ChainID = chainID
 	argOutputHandler.TxVersion = txVersion
 
-	outputHandler, err := io.NewOutputHandler(argOutputHandler)
+	outputHandler, err := plugins.NewOutputHandler(argOutputHandler)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	initialAccountChecker, err := checking.NewInitialAccountsChecker(nodePriceValue, totalSupplyValue)
+	initialAccountChecker, err := check.NewInitialAccountsChecker(nodePriceValue, totalSupplyValue)
 	if err != nil {
 		return err
 	}
