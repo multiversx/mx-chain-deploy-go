@@ -5,6 +5,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
 	"github.com/ElrondNetwork/elrond-go/core"
+	"github.com/ElrondNetwork/elrond-go/sharding"
 )
 
 type baseGenerator struct {
@@ -54,4 +55,19 @@ func (bg *baseGenerator) generateValidatorAndObservers() ([]*data.BlsKey, []*dat
 	}
 
 	return validatorBlsKeys, observerBlsKeys, nil
+}
+
+func (bg *baseGenerator) computeInitialNode(key *data.WalletKey) []*sharding.InitialNode {
+	initialNodes := make([]*sharding.InitialNode, 0, len(key.BlsKeys))
+
+	for _, blsKey := range key.BlsKeys {
+		initialNode := &sharding.InitialNode{
+			PubKey:        bg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
+			Address:       bg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			InitialRating: bg.initialRating,
+		}
+		initialNodes = append(initialNodes, initialNode)
+	}
+
+	return initialNodes
 }

@@ -134,7 +134,7 @@ VERSION:
 		Name: "stake-type",
 		Usage: "defines the 2 possible ways to stake the nodes: 'direct' as in direct staking " +
 			"and 'delegated' that will stake the nodes through delegation",
-		Value: "delegated",
+		Value: "mixed",
 	}
 	delegationOwnerPublicKey = cli.StringFlag{
 		Name:  "delegation-owner-pk",
@@ -143,8 +143,18 @@ VERSION:
 	}
 	numDelegators = cli.UintFlag{
 		Name:  "num-delegators",
-		Usage: "number of delegators if the stake-type is of type `delegated`",
+		Usage: "number of delegators if the stake-type is of type `delegated` or `mixed`",
 		Value: 100,
+	}
+	numDelegatedNodes = cli.UintFlag{
+		Name:  "num-delegated-nodes",
+		Usage: "number of delegated nodes if the stake-type is of type `mixed`",
+		Value: 4,
+	}
+	maxNumValidatorsPerOwner = cli.UintFlag{
+		Name:  "max-num-validators-per-node",
+		Usage: "maximum number of validators held by an owner. The value will vary between [1-max] randomly.",
+		Value: 1,
 	}
 	richestAccount = cli.BoolFlag{
 		Name: "richest-account",
@@ -191,6 +201,8 @@ func main() {
 		delegationOwnerPublicKey,
 		numDelegators,
 		richestAccount,
+		numDelegatedNodes,
+		maxNumValidatorsPerOwner,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -233,6 +245,8 @@ func generate(ctx *cli.Context) error {
 	withRichestAccount := ctx.GlobalBool(richestAccount.Name)
 	stakeTypeString := ctx.GlobalString(stakeType.Name)
 	delegationOwnerPkString := ctx.GlobalString(delegationOwnerPublicKey.Name)
+	numDelegatedNodesValue := ctx.GlobalUint(numDelegatedNodes.Name)
+	maxNumValidatorsPerOwnerValue := ctx.GlobalUint(maxNumValidatorsPerOwner.Name)
 
 	err = prepareOutputDirectory(outputDirectory)
 	if err != nil {
@@ -289,7 +303,7 @@ func generate(ctx *cli.Context) error {
 		walletPubKeyConverter,
 		shardCoordinator,
 		generateTxgenFile,
-		stakeTypeString == core.DelegatedStakeType,
+		stakeTypeString == core.DelegatedStakeType || stakeTypeString == core.MixedType,
 	)
 	if err != nil {
 		return err
@@ -319,7 +333,7 @@ func generate(ctx *cli.Context) error {
 		NumValidatorBlsKeys:       uint(numValidators),
 		NumObserverBlsKeys:        uint(numObservers),
 		RichestAccountMode:        withRichestAccount,
-		MaxNumNodesOnOwner:        1, //TODO in next PR: replace this with a flag
+		MaxNumNodesOnOwner:        maxNumValidatorsPerOwnerValue,
 		NumAdditionalWalletKeys:   uint(numOfAdditionalAccounts),
 		IntRandomizer:             &random.ConcurrentSafeIntRandomizer{},
 		NodePrice:                 nodePriceValue,
@@ -330,6 +344,7 @@ func generate(ctx *cli.Context) error {
 		DelegationOwnerNonce:      delegationOwnerNonce,
 		VmType:                    vmType,
 		NumDelegators:             numDelegatorsValue,
+		NumDelegatedNodes:         numDelegatedNodesValue,
 	}
 
 	dataGenerator, err := factory.CreateDataGenerator(argDataGenerator)

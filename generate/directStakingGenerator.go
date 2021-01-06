@@ -165,21 +165,6 @@ func (dsg *directStakingGenerator) computeInitialNodes(walletKeys []*data.Wallet
 	return initialNodes
 }
 
-func (dsg *directStakingGenerator) computeInitialNode(key *data.WalletKey) []*sharding.InitialNode {
-	initialNodes := make([]*sharding.InitialNode, 0, len(key.BlsKeys))
-
-	for _, blsKey := range key.BlsKeys {
-		initialNode := &sharding.InitialNode{
-			PubKey:        dsg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
-			Address:       dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
-			InitialRating: dsg.initialRating,
-		}
-		initialNodes = append(initialNodes, initialNode)
-	}
-
-	return initialNodes
-}
-
 // IsInterfaceNil returns if underlying object is nil
 func (dsg *directStakingGenerator) IsInterfaceNil() bool {
 	return dsg == nil

@@ -30,6 +30,7 @@ type ArgDataGenerator struct {
 	DelegationOwnerNonce      uint64
 	VmType                    string
 	NumDelegators             uint
+	NumDelegatedNodes         uint
 }
 
 // CreateDataGenerator will attempt to create a data generator instance
@@ -39,6 +40,8 @@ func CreateDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
 		return stakedTypeDataGenerator(arg)
 	case core.DelegatedStakeType:
 		return delegatedTypeDataGenerator(arg)
+	case core.MixedType:
+		return mixedTypeDataGenerator(arg)
 	default:
 		return nil, fmt.Errorf("%w: %s", ErrUnknownGenerationType, arg.GenerationType)
 	}
@@ -84,4 +87,32 @@ func delegatedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
 	}
 
 	return generate.NewDelegatedGenerator(argDelegatedStaking)
+}
+
+func mixedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
+	argDelegatedStaking := generate.ArgDelegatedStakingGenerator{
+		KeyGeneratorForValidators: arg.KeyGeneratorForValidators,
+		KeyGeneratorForWallets:    arg.KeyGeneratorForWallets,
+		WalletPubKeyConverter:     arg.WalletPubKeyConverter,
+		ValidatorPubKeyConverter:  arg.ValidatorPubKeyConverter,
+		NumValidatorBlsKeys:       arg.NumValidatorBlsKeys,
+		NumObserverBlsKeys:        arg.NumObserverBlsKeys,
+		RichestAccountMode:        arg.RichestAccountMode,
+		NumAdditionalWalletKeys:   arg.NumAdditionalWalletKeys,
+		NodePrice:                 arg.NodePrice,
+		TotalSupply:               arg.TotalSupply,
+		InitialRating:             arg.InitialRating,
+		DelegationOwnerPkString:   arg.DelegationOwnerPkString,
+		DelegationOwnerNonce:      arg.DelegationOwnerNonce,
+		VmType:                    arg.VmType,
+		NumDelegators:             arg.NumDelegators,
+	}
+
+	argMixedStaking := generate.ArgMixedStakingGenerator{
+		ArgDelegatedStakingGenerator: argDelegatedStaking,
+		NumDelegatedNodes:            arg.NumDelegatedNodes,
+		MaxNumNodesOnOwner:           arg.MaxNumNodesOnOwner,
+	}
+
+	return generate.NewMixedStakingGenerator(argMixedStaking)
 }
