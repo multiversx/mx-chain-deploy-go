@@ -6,7 +6,6 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-deploy-go/generate/disabled"
 	"github.com/ElrondNetwork/elrond-go/core/check"
 )
 
@@ -31,14 +30,14 @@ func checkDelegatedStakingArgument(arg ArgDelegatedStakingGenerator) error {
 	return nil
 }
 
-func (dbs *delegatedBaseGenerator) prepareFieldsFromArguments(arg ArgDelegatedStakingGenerator) error {
+func (dbs *delegatedBaseGenerator) prepareFieldsFromArguments(arg ArgDelegatedStakingGenerator, randomizer IntRandomizer) error {
 	var err error
 	dbs.vkg, err = NewValidatorKeyGenerator(arg.KeyGeneratorForValidators)
 	if err != nil {
 		return err
 	}
 
-	dbs.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, &disabled.NilRandomizer{}, arg.NodePrice)
+	dbs.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, randomizer, arg.NodePrice)
 	if err != nil {
 		return err
 	}

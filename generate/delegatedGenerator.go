@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
+	"github.com/ElrondNetwork/elrond-deploy-go/generate/disabled"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
@@ -35,7 +36,7 @@ func NewDelegatedGenerator(arg ArgDelegatedStakingGenerator) (*delegatedStakingG
 		},
 	}
 
-	err = dsg.prepareFieldsFromArguments(arg)
+	err = dsg.prepareFieldsFromArguments(arg, &disabled.NilRandomizer{})
 	if err != nil {
 		return nil, err
 	}

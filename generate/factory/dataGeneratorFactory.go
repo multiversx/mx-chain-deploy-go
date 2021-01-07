@@ -112,6 +112,7 @@ func mixedTypeDataGenerator(arg ArgDataGenerator) (DataGenerator, error) {
 		ArgDelegatedStakingGenerator: argDelegatedStaking,
 		NumDelegatedNodes:            arg.NumDelegatedNodes,
 		MaxNumNodesOnOwner:           arg.MaxNumNodesOnOwner,
+		IntRandomizer:                arg.IntRandomizer,
 	}
 
 	return generate.NewMixedStakingGenerator(argMixedStaking)

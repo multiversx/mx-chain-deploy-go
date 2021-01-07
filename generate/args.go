@@ -48,4 +48,5 @@ type ArgMixedStakingGenerator struct {
 	ArgDelegatedStakingGenerator
 	NumDelegatedNodes  uint
 	MaxNumNodesOnOwner uint
+	IntRandomizer      IntRandomizer
 }

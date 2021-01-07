@@ -29,6 +29,9 @@ func NewDirectStakingGenerator(arg ArgDirectStakingGenerator) (*directStakingGen
 	if check.IfNil(arg.ValidatorPubKeyConverter) {
 		return nil, fmt.Errorf("%w for the ValidatorPubKeyConverter", ErrNilPubKeyConverter)
 	}
+	if check.IfNil(arg.IntRandomizer) {
+		return nil, ErrNilRandomizer
+	}
 
 	dsg := &directStakingGenerator{
 		baseGenerator: &baseGenerator{

@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
+	"github.com/ElrondNetwork/elrond-go/core/check"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
@@ -27,6 +28,9 @@ func NewMixedStakingGenerator(arg ArgMixedStakingGenerator) (*mixedStakingGenera
 	if arg.MaxNumNodesOnOwner == 0 {
 		return nil, fmt.Errorf("%w for MaxNumNodesOnOwner", ErrInvalidValue)
 	}
+	if check.IfNil(arg.IntRandomizer) {
+		return nil, ErrNilRandomizer
+	}
 
 	msg := &mixedStakingGenerator{
 		delegatedBaseGenerator: &delegatedBaseGenerator{
@@ -45,7 +49,7 @@ func NewMixedStakingGenerator(arg ArgMixedStakingGenerator) (*mixedStakingGenera
 		maxNumNodesOnOwner: arg.MaxNumNodesOnOwner,
 	}
 
-	err = msg.prepareFieldsFromArguments(arg.ArgDelegatedStakingGenerator)
+	err = msg.prepareFieldsFromArguments(arg.ArgDelegatedStakingGenerator, arg.IntRandomizer)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +204,7 @@ func (msg *mixedStakingGenerator) computeInitialNodes(validators []*data.BlsKey,
 	return initialNodes
 }
 
-// IsInterfaceNil returns if underlying object is nil
+// IsInterfaceNil returns true if there is no value under the interface
 func (msg *mixedStakingGenerator) IsInterfaceNil() bool {
 	return msg == nil
 }
