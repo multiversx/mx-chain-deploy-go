@@ -198,7 +198,7 @@ func (msg *mixedStakingGenerator) computeInitialNodes(validators []*data.BlsKey,
 
 	//staked nodes
 	for _, key := range walletKeys {
-		initialNodes = append(initialNodes, msg.computeInitialNode(key)...)
+		initialNodes = append(initialNodes, msg.computeInitialNodesForWalletKey(key)...)
 	}
 
 	return initialNodes

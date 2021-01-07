@@ -162,7 +162,7 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 func (dsg *directStakingGenerator) computeInitialNodes(walletKeys []*data.WalletKey) []*sharding.InitialNode {
 	initialNodes := make([]*sharding.InitialNode, 0)
 	for _, key := range walletKeys {
-		initialNodes = append(initialNodes, dsg.computeInitialNode(key)...)
+		initialNodes = append(initialNodes, dsg.computeInitialNodesForWalletKey(key)...)
 	}
 
 	return initialNodes

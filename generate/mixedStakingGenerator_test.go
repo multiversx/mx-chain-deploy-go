@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/check"
+	"github.com/ElrondNetwork/elrond-deploy-go/mock"
 	"github.com/ElrondNetwork/elrond-go/core/pubkeyConverter"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing"
 	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
@@ -41,6 +42,7 @@ func createMockMixedStakingGeneratorArguments() ArgMixedStakingGenerator {
 		ArgDelegatedStakingGenerator: arg,
 		NumDelegatedNodes:            0,
 		MaxNumNodesOnOwner:           0,
+		IntRandomizer:                &mock.IntRandomizerStub{},
 	}
 }
 

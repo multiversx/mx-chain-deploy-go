@@ -57,7 +57,7 @@ func (bg *baseGenerator) generateValidatorAndObservers() ([]*data.BlsKey, []*dat
 	return validatorBlsKeys, observerBlsKeys, nil
 }
 
-func (bg *baseGenerator) computeInitialNode(key *data.WalletKey) []*sharding.InitialNode {
+func (bg *baseGenerator) computeInitialNodesForWalletKey(key *data.WalletKey) []*sharding.InitialNode {
 	initialNodes := make([]*sharding.InitialNode, 0, len(key.BlsKeys))
 
 	for _, blsKey := range key.BlsKeys {
