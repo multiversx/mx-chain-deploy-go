@@ -165,7 +165,7 @@ func (dsg *directStakingGenerator) computeInitialNodes(walletKeys []*data.Wallet
 	return initialNodes
 }
 
-// IsInterfaceNil returns if underlying object is nil
+// IsInterfaceNil returns true if there is no value under the interface
 func (dsg *directStakingGenerator) IsInterfaceNil() bool {
 	return dsg == nil
 }

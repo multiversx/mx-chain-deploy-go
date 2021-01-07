@@ -171,7 +171,7 @@ func (dsg *delegatedStakingGenerator) computeInitialNodes(validators []*data.Bls
 	return initialNodes
 }
 
-// IsInterfaceNil returns if underlying object is nil
+// IsInterfaceNil returns true if there is no value under the interface
 func (dsg *delegatedStakingGenerator) IsInterfaceNil() bool {
 	return dsg == nil
 }
