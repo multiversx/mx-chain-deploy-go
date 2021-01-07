@@ -9,7 +9,7 @@ func (nr *NilRandomizer) Intn(_ int) int {
 	return 0
 }
 
-// IsInterfaceNil returns if underlying object is nil
+// IsInterfaceNil returns true if there is no value under the interface
 func (nr *NilRandomizer) IsInterfaceNil() bool {
 	return nr == nil
 }

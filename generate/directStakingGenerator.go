@@ -180,7 +180,7 @@ func (dsg *directStakingGenerator) computeInitialNode(key *data.WalletKey) []*sh
 	return initialNodes
 }
 
-// IsInterfaceNil returns if underlying object is nil
+// IsInterfaceNil returns true if there is no value under the interface
 func (dsg *directStakingGenerator) IsInterfaceNil() bool {
 	return dsg == nil
 }

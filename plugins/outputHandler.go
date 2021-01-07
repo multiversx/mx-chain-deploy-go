@@ -257,7 +257,7 @@ func (oh *outputHandler) Close() {
 	}
 }
 
-// IsInterfaceNil returns if underlying object is nil
+// IsInterfaceNil returns true if there is no value under the interface
 func (oh *outputHandler) IsInterfaceNil() bool {
 	return oh == nil
 }
