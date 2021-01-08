@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"os"
@@ -50,7 +51,7 @@ func (fh *fileHandler) WriteObjectInFile(data interface{}) error {
 func (fh *fileHandler) SaveSkToPemFile(identifier string, skBytes []byte) error {
 	blk := pem.Block{
 		Type:  "PRIVATE KEY for " + identifier,
-		Bytes: skBytes,
+		Bytes: []byte(hex.EncodeToString(skBytes)),
 	}
 
 	return pem.Encode(fh, &blk)
