@@ -29,6 +29,9 @@ func NewDirectStakingGenerator(arg ArgDirectStakingGenerator) (*directStakingGen
 	if check.IfNil(arg.ValidatorPubKeyConverter) {
 		return nil, fmt.Errorf("%w for the ValidatorPubKeyConverter", ErrNilPubKeyConverter)
 	}
+	if check.IfNil(arg.IntRandomizer) {
+		return nil, ErrNilRandomizer
+	}
 
 	dsg := &directStakingGenerator{
 		baseGenerator: &baseGenerator{
@@ -159,22 +162,7 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 func (dsg *directStakingGenerator) computeInitialNodes(walletKeys []*data.WalletKey) []*sharding.InitialNode {
 	initialNodes := make([]*sharding.InitialNode, 0)
 	for _, key := range walletKeys {
-		initialNodes = append(initialNodes, dsg.computeInitialNode(key)...)
-	}
-
-	return initialNodes
-}
-
-func (dsg *directStakingGenerator) computeInitialNode(key *data.WalletKey) []*sharding.InitialNode {
-	initialNodes := make([]*sharding.InitialNode, 0, len(key.BlsKeys))
-
-	for _, blsKey := range key.BlsKeys {
-		initialNode := &sharding.InitialNode{
-			PubKey:        dsg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
-			Address:       dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
-			InitialRating: dsg.initialRating,
-		}
-		initialNodes = append(initialNodes, initialNode)
+		initialNodes = append(initialNodes, dsg.computeInitialNodesForWalletKey(key)...)
 	}
 
 	return initialNodes

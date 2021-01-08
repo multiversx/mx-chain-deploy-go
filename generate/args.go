@@ -42,3 +42,11 @@ type ArgDelegatedStakingGenerator struct {
 	VmType                    string
 	NumDelegators             uint
 }
+
+// ArgMixedStakingGenerator is the argument used in mixed staking mechanism
+type ArgMixedStakingGenerator struct {
+	ArgDelegatedStakingGenerator
+	NumDelegatedNodes  uint
+	MaxNumNodesOnOwner uint
+	IntRandomizer      IntRandomizer
+}

@@ -4,67 +4,39 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/core"
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
 	"github.com/ElrondNetwork/elrond-deploy-go/generate/disabled"
-	"github.com/ElrondNetwork/elrond-go-logger/check"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
 
 type delegatedStakingGenerator struct {
-	*baseGenerator
-	delegationScPkString string
-	delegationScPkBytes  []byte
-	numDelegators        uint
+	*delegatedBaseGenerator
 }
 
 // NewDelegatedGenerator will create a delegated staking generator
 func NewDelegatedGenerator(arg ArgDelegatedStakingGenerator) (*delegatedStakingGenerator, error) {
-	if check.IfNil(arg.WalletPubKeyConverter) {
-		return nil, fmt.Errorf("%w for the WalletPubKeyConverter", ErrNilPubKeyConverter)
-	}
-	if check.IfNil(arg.ValidatorPubKeyConverter) {
-		return nil, fmt.Errorf("%w for the ValidatorPubKeyConverter", ErrNilPubKeyConverter)
-	}
-	if arg.NumDelegators == 0 {
-		return nil, fmt.Errorf("%w for the NumDelegators", ErrInvalidValue)
+	err := checkDelegatedStakingArgument(arg)
+	if err != nil {
+		return nil, err
 	}
 
 	dsg := &delegatedStakingGenerator{
-		baseGenerator: &baseGenerator{
-			numValidatorBlsKeys:      arg.NumValidatorBlsKeys,
-			numObserverBlsKeys:       arg.NumObserverBlsKeys,
-			richestAccountMode:       arg.RichestAccountMode,
-			numAdditionalWalletKeys:  arg.NumAdditionalWalletKeys,
-			totalSupply:              arg.TotalSupply,
-			walletPubKeyConverter:    arg.WalletPubKeyConverter,
-			validatorPubKeyConverter: arg.ValidatorPubKeyConverter,
+		delegatedBaseGenerator: &delegatedBaseGenerator{
+			baseGenerator: &baseGenerator{
+				numValidatorBlsKeys:      arg.NumValidatorBlsKeys,
+				numObserverBlsKeys:       arg.NumObserverBlsKeys,
+				richestAccountMode:       arg.RichestAccountMode,
+				numAdditionalWalletKeys:  arg.NumAdditionalWalletKeys,
+				totalSupply:              arg.TotalSupply,
+				walletPubKeyConverter:    arg.WalletPubKeyConverter,
+				validatorPubKeyConverter: arg.ValidatorPubKeyConverter,
+			},
+			numDelegators: arg.NumDelegators,
 		},
-		numDelegators: arg.NumDelegators,
-	}
-	var err error
-	dsg.vkg, err = NewValidatorKeyGenerator(arg.KeyGeneratorForValidators)
-	if err != nil {
-		return nil, err
 	}
 
-	dsg.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, &disabled.NilRandomizer{}, arg.NodePrice)
-	if err != nil {
-		return nil, err
-	}
-
-	dsg.delegationScPkString, err = core.GenerateSCAddress(
-		arg.DelegationOwnerPkString,
-		arg.DelegationOwnerNonce,
-		arg.VmType,
-		arg.WalletPubKeyConverter,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	dsg.delegationScPkBytes, err = arg.WalletPubKeyConverter.Decode(dsg.delegationScPkString)
+	err = dsg.prepareFieldsFromArguments(arg, &disabled.NilRandomizer{})
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +70,7 @@ func (dsg *delegatedStakingGenerator) Generate() (*data.GeneratorOutput, error) 
 		return nil, ErrInvalidNumberOfWalletKeys
 	}
 
-	usedBalance := dsg.prepareDelegators(delegators, validatorBlsKeys)
+	usedBalance := dsg.prepareDelegators(delegators, len(validatorBlsKeys))
 	balance := big.NewInt(0).Sub(dsg.totalSupply, usedBalance)
 	if balance.Cmp(zero) < 0 {
 		return nil, fmt.Errorf("%w, total supply: %s, usedBalance: %s", ErrTotalSupplyTooSmall,
@@ -128,32 +100,6 @@ func (dsg *delegatedStakingGenerator) Generate() (*data.GeneratorOutput, error) 
 	gen.InitialNodes = dsg.computeInitialNodes(validatorBlsKeys)
 
 	return gen, nil
-}
-
-func (dsg *delegatedStakingGenerator) prepareDelegators(delegators []*data.WalletKey, validators []*data.BlsKey) *big.Int {
-	//totalDelegated = len(validators) * nodePrice
-	totalDelegated := big.NewInt(int64(len(validators)))
-	totalDelegated.Mul(totalDelegated, dsg.wkg.NodePrice())
-	//delegated = totalDelegated / len(delegators)
-	delegated := big.NewInt(0).Set(totalDelegated)
-	delegated.Div(delegated, big.NewInt(int64(len(delegators))))
-	//remainder = totalDelegated % len(delegators)
-	remainder := big.NewInt(0).Set(totalDelegated)
-	remainder.Mod(remainder, big.NewInt(int64(len(delegators))))
-
-	for i, wallet := range delegators {
-		wallet.DelegatedPubKeyBytes = make([]byte, len(dsg.delegationScPkBytes))
-		copy(wallet.DelegatedPubKeyBytes, dsg.delegationScPkBytes)
-		wallet.DelegatedValue = big.NewInt(0).Set(delegated)
-		if i == 0 {
-			wallet.DelegatedValue.Add(wallet.DelegatedValue, remainder)
-		}
-		//give a little balance to each delegator so it can claim the rewards
-		wallet.Balance = minimumInitialBalance
-		totalDelegated.Add(totalDelegated, minimumInitialBalance)
-	}
-
-	return totalDelegated
 }
 
 func (dsg *delegatedStakingGenerator) computeInitialAccounts(
