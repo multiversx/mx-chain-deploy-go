@@ -5,12 +5,12 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go-logger/check"
+	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
 
-var minimumInitialBalance = big.NewInt(1000000000000000000) //1eGLD
+var minimumInitialBalance = big.NewInt(1000000000000000000) // 1eGLD
 var zero = big.NewInt(0)
 
 type directStakingGenerator struct {

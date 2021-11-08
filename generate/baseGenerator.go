@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go/core"
+	"github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
 
@@ -22,10 +22,10 @@ type baseGenerator struct {
 }
 
 func (bg *baseGenerator) computeWalletBalance(numTotalWalletKeys int, balance *big.Int) (*big.Int, *big.Int) {
-	//walletBalance = balance / numTotalWalletKeys
+	// walletBalance = balance / numTotalWalletKeys
 	walletBalance := big.NewInt(0).Set(balance)
 	walletBalance.Div(walletBalance, big.NewInt(int64(numTotalWalletKeys)))
-	//remainder = balance % numTotalWalletKeys
+	// remainder = balance % numTotalWalletKeys
 	remainder := big.NewInt(0).Set(balance)
 	remainder.Mod(remainder, big.NewInt(int64(numTotalWalletKeys)))
 
@@ -34,7 +34,7 @@ func (bg *baseGenerator) computeWalletBalance(numTotalWalletKeys int, balance *b
 		return walletBalance, remainder
 	}
 
-	//remainder = balance - (minimumInitialBalance * minimumInitialBalance)
+	// remainder = balance - (minimumInitialBalance * minimumInitialBalance)
 	remainder = big.NewInt(0).Set(balance)
 	totalWalletBalance := big.NewInt(int64(numTotalWalletKeys))
 	totalWalletBalance.Mul(totalWalletBalance, minimumInitialBalance)

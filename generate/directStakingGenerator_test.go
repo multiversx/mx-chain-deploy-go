@@ -6,10 +6,11 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/check"
 	"github.com/ElrondNetwork/elrond-deploy-go/mock"
-	"github.com/ElrondNetwork/elrond-go/core/pubkeyConverter"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
+	"github.com/ElrondNetwork/elrond-go-core/core/pubkeyConverter"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/ed25519"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/mcl"
+	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func createMockDirectStakingGeneratorArguments() ArgDirectStakingGenerator {
 		TotalSupply:               big.NewInt(20000000),
 		InitialRating:             50,
 	}
-	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32)
+	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, logger.GetOrCreate("test"))
 	arg.ValidatorPubKeyConverter, _ = pubkeyConverter.NewHexPubkeyConverter(96)
 
 	return arg

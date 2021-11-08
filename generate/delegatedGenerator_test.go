@@ -5,10 +5,11 @@ import (
 	"testing"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/check"
-	"github.com/ElrondNetwork/elrond-go/core/pubkeyConverter"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
+	"github.com/ElrondNetwork/elrond-go-core/core/pubkeyConverter"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/ed25519"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/mcl"
+	logger "github.com/ElrondNetwork/elrond-go-logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +31,7 @@ func createMockDelegatedStakingGeneratorArguments() ArgDelegatedStakingGenerator
 		VmType:                    "0500",
 		NumDelegators:             0,
 	}
-	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32)
+	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, logger.GetOrCreate("test"))
 	arg.ValidatorPubKeyConverter, _ = pubkeyConverter.NewHexPubkeyConverter(96)
 	arg.TotalSupply = big.NewInt(0)
 	arg.TotalSupply.SetString("20000000000000000000000000", 10)

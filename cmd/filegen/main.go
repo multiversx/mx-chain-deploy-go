@@ -11,15 +11,15 @@ import (
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
 	"github.com/ElrondNetwork/elrond-deploy-go/generate/factory"
 	"github.com/ElrondNetwork/elrond-deploy-go/plugins"
+	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
+	"github.com/ElrondNetwork/elrond-go-core/core/random"
+	crypto "github.com/ElrondNetwork/elrond-go-crypto"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/ed25519"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/mcl"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
+	elrondCommonFactory "github.com/ElrondNetwork/elrond-go/common/factory"
 	"github.com/ElrondNetwork/elrond-go/config"
-	elrondCore "github.com/ElrondNetwork/elrond-go/core"
-	"github.com/ElrondNetwork/elrond-go/core/random"
-	"github.com/ElrondNetwork/elrond-go/crypto"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/mcl"
-	elrondFactory "github.com/ElrondNetwork/elrond-go/data/state/factory"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 	"github.com/urfave/cli"
 )
@@ -116,16 +116,6 @@ VERSION:
 		Name:  "adaptivity",
 		Usage: "Adaptivity value - should be set to true if shard merging and splitting is enabled",
 	}
-	chainID = cli.StringFlag{
-		Name:  "chain-id",
-		Usage: "Chain ID flag",
-		Value: "T",
-	}
-	transactionVersion = cli.UintFlag{
-		Name:  "tx-version",
-		Usage: "Transaction Version flag flag",
-		Value: 1,
-	}
 	txgenFile = cli.BoolFlag{
 		Name:  "txgen",
 		Usage: "If set, will generate the accounts.json file needed for txgen",
@@ -194,8 +184,6 @@ func main() {
 		initialRating,
 		hysteresis,
 		adaptivity,
-		chainID,
-		transactionVersion,
 		txgenFile,
 		stakeType,
 		delegationOwnerPublicKey,
@@ -227,19 +215,17 @@ func generate(ctx *cli.Context) error {
 
 	startTime := time.Now()
 	outputDirectory := ctx.GlobalString(outputDirectoryFlag.Name)
-	numOfShards := ctx.GlobalInt(numOfShards.Name)
-	numOfNodesPerShard := ctx.GlobalInt(numOfNodesPerShard.Name)
-	consensusGroupSize := ctx.GlobalInt(consensusGroupSize.Name)
-	numOfObserversPerShard := ctx.GlobalInt(numOfObserversPerShard.Name)
-	numOfMetachainNodes := ctx.GlobalInt(numOfMetachainNodes.Name)
-	metachainConsensusGroupSize := ctx.GlobalInt(metachainConsensusGroupSize.Name)
-	numOfMetachainObservers := ctx.GlobalInt(numOfMetachainObservers.Name)
-	numOfAdditionalAccounts := ctx.GlobalInt(numAdditionalAccountsInGenesis.Name)
-	initialRating := ctx.GlobalUint64(initialRating.Name)
+	numOfShardsValue := ctx.GlobalInt(numOfShards.Name)
+	numOfNodesPerShardValue := ctx.GlobalInt(numOfNodesPerShard.Name)
+	consensusGroupSizeValue := ctx.GlobalInt(consensusGroupSize.Name)
+	numOfObserversPerShardValue := ctx.GlobalInt(numOfObserversPerShard.Name)
+	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
+	metachainConsensusGroupSizeValue := ctx.GlobalInt(metachainConsensusGroupSize.Name)
+	numOfMetachainObserversValue := ctx.GlobalInt(numOfMetachainObservers.Name)
+	numOfAdditionalAccountsValue := ctx.GlobalInt(numAdditionalAccountsInGenesis.Name)
+	initialRatingValue := ctx.GlobalUint64(initialRating.Name)
 	hysteresisValue := ctx.GlobalFloat64(hysteresis.Name)
 	adaptivityValue := ctx.GlobalBool(adaptivity.Name)
-	chainID := ctx.GlobalString(chainID.Name)
-	txVersion := ctx.GlobalUint(transactionVersion.Name)
 	generateTxgenFile := ctx.IsSet(txgenFile.Name)
 	numDelegatorsValue := ctx.GlobalUint(numDelegators.Name)
 	withRichestAccount := ctx.GlobalBool(richestAccount.Name)
@@ -253,26 +239,26 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	numValidatorsOnAShard := int(math.Ceil(float64(numOfNodesPerShard) * (1 + hysteresisValue)))
-	numShardValidators := numOfShards * numValidatorsOnAShard
-	numValidatorsOnMeta := int(math.Ceil(float64(numOfMetachainNodes) * (1 + hysteresisValue)))
+	numValidatorsOnAShard := int(math.Ceil(float64(numOfNodesPerShardValue) * (1 + hysteresisValue)))
+	numShardValidators := numOfShardsValue * numValidatorsOnAShard
+	numValidatorsOnMeta := int(math.Ceil(float64(metachainConsensusGroupSizeValue) * (1 + hysteresisValue)))
 	numValidators := numShardValidators + numValidatorsOnMeta
-	numObservers := numOfShards*numOfObserversPerShard + numOfMetachainObservers
+	numObservers := numOfShardsValue*numOfObserversPerShardValue + numOfMetachainObserversValue
 
 	invalidNumPrivPubKey := numValidators < 1 ||
-		numOfShards < 1 ||
-		numOfNodesPerShard < 1 ||
-		numOfMetachainNodes < 1
+		numOfShardsValue < 1 ||
+		numOfNodesPerShardValue < 1 ||
+		numOfMetachainNodesValue < 1
 	if invalidNumPrivPubKey {
 		return errInvalidNumPrivPubKeys
 	}
 
-	invalidNumOfNodes := consensusGroupSize < 1 ||
-		consensusGroupSize > numOfNodesPerShard ||
-		numOfObserversPerShard < 0 ||
-		metachainConsensusGroupSize < 1 ||
-		metachainConsensusGroupSize > numOfMetachainNodes ||
-		numOfMetachainObservers < 0
+	invalidNumOfNodes := consensusGroupSizeValue < 1 ||
+		consensusGroupSizeValue > numOfNodesPerShardValue ||
+		numOfObserversPerShardValue < 0 ||
+		metachainConsensusGroupSizeValue < 1 ||
+		metachainConsensusGroupSizeValue > numOfMetachainNodesValue ||
+		numOfMetachainObserversValue < 0
 	if invalidNumOfNodes {
 		return errInvalidNumOfNodes
 	}
@@ -292,7 +278,7 @@ func generate(ctx *cli.Context) error {
 	validatorPubKeyConverter, walletPubKeyConverter, err := createPubKeyConverters()
 	validatorKeyGenerator, walletKeyGenerator := createKeyGenerators()
 
-	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShards), 0)
+	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShardsValue), 0)
 	if err != nil {
 		return err
 	}
@@ -309,14 +295,12 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 	argOutputHandler.RoundDuration = defaultRoundDuration
-	argOutputHandler.ConsensusGroupSize = consensusGroupSize
-	argOutputHandler.NumOfNodesPerShard = numOfNodesPerShard
-	argOutputHandler.MetachainConsensusGroupSize = metachainConsensusGroupSize
-	argOutputHandler.NumOfMetachainNodes = numOfMetachainNodes
+	argOutputHandler.ConsensusGroupSize = consensusGroupSizeValue
+	argOutputHandler.NumOfNodesPerShard = numOfNodesPerShardValue
+	argOutputHandler.MetachainConsensusGroupSize = metachainConsensusGroupSizeValue
+	argOutputHandler.NumOfMetachainNodes = numOfMetachainNodesValue
 	argOutputHandler.HysteresisValue = float32(hysteresisValue)
 	argOutputHandler.AdaptivityValue = adaptivityValue
-	argOutputHandler.ChainID = chainID
-	argOutputHandler.TxVersion = txVersion
 
 	outputHandler, err := plugins.NewOutputHandler(argOutputHandler)
 	if err != nil {
@@ -334,11 +318,11 @@ func generate(ctx *cli.Context) error {
 		NumObserverBlsKeys:        uint(numObservers),
 		RichestAccountMode:        withRichestAccount,
 		MaxNumNodesOnOwner:        maxNumValidatorsPerOwnerValue,
-		NumAdditionalWalletKeys:   uint(numOfAdditionalAccounts),
+		NumAdditionalWalletKeys:   uint(numOfAdditionalAccountsValue),
 		IntRandomizer:             &random.ConcurrentSafeIntRandomizer{},
 		NodePrice:                 nodePriceValue,
 		TotalSupply:               totalSupplyValue,
-		InitialRating:             initialRating,
+		InitialRating:             initialRatingValue,
 		GenerationType:            stakeTypeString,
 		DelegationOwnerPkString:   delegationOwnerPkString,
 		DelegationOwnerNonce:      delegationOwnerNonce,
@@ -387,7 +371,7 @@ func prepareOutputDirectory(outputDirectory string) error {
 }
 
 func createPubKeyConverters() (elrondCore.PubkeyConverter, elrondCore.PubkeyConverter, error) {
-	walletPubKeyConverter, err := elrondFactory.NewPubkeyConverter(config.PubkeyConfig{
+	walletPubKeyConverter, err := elrondCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32,
 		Type:   walletPubKeyFormat,
 	})
@@ -395,7 +379,7 @@ func createPubKeyConverters() (elrondCore.PubkeyConverter, elrondCore.PubkeyConv
 		return nil, nil, fmt.Errorf("%w for walletPubKeyConverter", err)
 	}
 
-	validatorPubKeyConverter, err := elrondFactory.NewPubkeyConverter(config.PubkeyConfig{
+	validatorPubKeyConverter, err := elrondCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 96,
 		Type:   validatorPubKeyFormat,
 	})

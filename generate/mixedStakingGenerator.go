@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go/core/check"
+	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
@@ -113,7 +113,7 @@ func (msg *mixedStakingGenerator) Generate() (*data.GeneratorOutput, error) {
 }
 
 func (msg *mixedStakingGenerator) generateWalletKeys(validatorBlsKeys []*data.BlsKey) ([]*data.WalletKey, *big.Int, error) {
-	//the first msg.numDelegatedNodes are considered delegated. The rest are considered staked
+	// the first msg.numDelegatedNodes are considered delegated. The rest are considered staked
 	stakedNodes := validatorBlsKeys[msg.numDelegatedNodes:]
 	walletKeys, err := msg.wkg.GenerateKeys(stakedNodes, int(msg.maxNumNodesOnOwner))
 	if err != nil {
@@ -184,7 +184,7 @@ func (msg *mixedStakingGenerator) computeInitialAccounts(
 func (msg *mixedStakingGenerator) computeInitialNodes(validators []*data.BlsKey, walletKeys []*data.WalletKey) []*sharding.InitialNode {
 	initialNodes := make([]*sharding.InitialNode, 0, len(validators))
 
-	//delegated nodes
+	// delegated nodes
 	for i := uint(0); i < msg.numDelegatedNodes; i++ {
 		blsKey := validators[i]
 
@@ -196,7 +196,7 @@ func (msg *mixedStakingGenerator) computeInitialNodes(validators []*data.BlsKey,
 		initialNodes = append(initialNodes, initialNode)
 	}
 
-	//staked nodes
+	// staked nodes
 	for _, key := range walletKeys {
 		initialNodes = append(initialNodes, msg.computeInitialNodesForWalletKey(key)...)
 	}

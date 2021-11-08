@@ -5,9 +5,9 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
+	"github.com/ElrondNetwork/elrond-go-core/core"
+	"github.com/ElrondNetwork/elrond-go-core/core/check"
 	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go-logger/check"
-	"github.com/ElrondNetwork/elrond-go/core"
 	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
@@ -32,8 +32,6 @@ type ArgOutputHandler struct {
 	NumOfMetachainNodes         int
 	HysteresisValue             float32
 	AdaptivityValue             bool
-	ChainID                     string
-	TxVersion                   uint
 }
 
 type outputHandler struct {
@@ -53,8 +51,6 @@ type outputHandler struct {
 	numOfMetachainNodes         int
 	hysteresisValue             float32
 	adaptivityValue             bool
-	chainID                     string
-	txVersion                   uint
 }
 
 // NewOutputHandler will create a new output handler able to write data on disk
@@ -71,7 +67,7 @@ func NewOutputHandler(arg ArgOutputHandler) (*outputHandler, error) {
 	if check.IfNil(arg.NodesSetupHandler) {
 		return nil, fmt.Errorf("%w for NodesSetupHandler", ErrNilFileHandler)
 	}
-	//TxgenAccountsHandler and DelegatorsHandler can be nil
+	// TxgenAccountsHandler and DelegatorsHandler can be nil
 
 	if check.IfNil(arg.ValidatorPubKeyConverter) {
 		return nil, fmt.Errorf("%w for ValidatorPubKeyConverter", ErrNilPubKeyConverter)
@@ -100,8 +96,6 @@ func NewOutputHandler(arg ArgOutputHandler) (*outputHandler, error) {
 		numOfMetachainNodes:         arg.NumOfMetachainNodes,
 		hysteresisValue:             arg.HysteresisValue,
 		adaptivityValue:             arg.AdaptivityValue,
-		chainID:                     arg.ChainID,
-		txVersion:                   arg.TxVersion,
 	}, nil
 }
 
@@ -117,8 +111,6 @@ func (oh *outputHandler) writeNodesSetup(
 		MetaChainMinNodes:           uint32(oh.numOfMetachainNodes),
 		Hysteresis:                  oh.hysteresisValue,
 		Adaptivity:                  oh.adaptivityValue,
-		ChainID:                     oh.chainID,
-		MinTransactionVersion:       uint32(oh.txVersion),
 		InitialNodes:                initialNodes,
 	}
 

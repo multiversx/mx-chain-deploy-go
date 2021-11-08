@@ -6,7 +6,7 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go/core/check"
+	"github.com/ElrondNetwork/elrond-go-core/core/check"
 )
 
 type delegatedBaseGenerator struct {
@@ -61,13 +61,13 @@ func (dbs *delegatedBaseGenerator) prepareFieldsFromArguments(arg ArgDelegatedSt
 }
 
 func (dbs *delegatedBaseGenerator) prepareDelegators(delegators []*data.WalletKey, numDelegated int) *big.Int {
-	//totalDelegated = numDelegated * nodePrice
+	// totalDelegated = numDelegated * nodePrice
 	totalDelegated := big.NewInt(int64(numDelegated))
 	totalDelegated.Mul(totalDelegated, dbs.wkg.NodePrice())
-	//delegated = totalDelegated / len(delegators)
+	// delegated = totalDelegated / len(delegators)
 	delegated := big.NewInt(0).Set(totalDelegated)
 	delegated.Div(delegated, big.NewInt(int64(len(delegators))))
-	//remainder = totalDelegated % len(delegators)
+	// remainder = totalDelegated % len(delegators)
 	remainder := big.NewInt(0).Set(totalDelegated)
 	remainder.Mod(remainder, big.NewInt(int64(len(delegators))))
 
@@ -78,7 +78,7 @@ func (dbs *delegatedBaseGenerator) prepareDelegators(delegators []*data.WalletKe
 		if i == 0 {
 			wallet.DelegatedValue.Add(wallet.DelegatedValue, remainder)
 		}
-		//give a little balance to each delegator so it can claim the rewards
+		// give a little balance to each delegator so it can claim the rewards
 		wallet.Balance = minimumInitialBalance
 		totalDelegated.Add(totalDelegated, minimumInitialBalance)
 	}

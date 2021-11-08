@@ -6,8 +6,8 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
 	"github.com/ElrondNetwork/elrond-deploy-go/generate"
-	elrondCore "github.com/ElrondNetwork/elrond-go/core"
-	"github.com/ElrondNetwork/elrond-go/crypto"
+	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
+	"github.com/ElrondNetwork/elrond-go-crypto"
 )
 
 // ArgDataGenerator is the argument used by the data generator method factory

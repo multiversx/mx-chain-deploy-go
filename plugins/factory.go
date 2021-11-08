@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/core"
-	elrondCore "github.com/ElrondNetwork/elrond-go/core"
+	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go/sharding"
 )
 
