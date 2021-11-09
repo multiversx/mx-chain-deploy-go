@@ -6,8 +6,8 @@ import (
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
 	"github.com/ElrondNetwork/elrond-deploy-go/mock"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing"
-	"github.com/ElrondNetwork/elrond-go/crypto/signing/ed25519"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing"
+	"github.com/ElrondNetwork/elrond-go-crypto/signing/ed25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

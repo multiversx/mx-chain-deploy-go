@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go/core/check"
-	"github.com/ElrondNetwork/elrond-go/crypto"
+	"github.com/ElrondNetwork/elrond-go-core/core/check"
+	"github.com/ElrondNetwork/elrond-go-crypto"
 )
 
 type walletKeyGenerator struct {
@@ -51,7 +51,7 @@ func (wkg *walletKeyGenerator) GenerateKeys(blsKeys []*data.BlsKey, maxNumKeysOn
 
 		numKeysOnOwner := maxNumKeysOnOwner
 		if maxNumKeysOnOwner > 1 {
-			//create a random number
+			// create a random number
 			numKeysOnOwner = wkg.randomizer.Intn(maxNumKeysOnOwner-1) + 1
 			if numKeysOnOwner > len(blsKeysPool) {
 				numKeysOnOwner = len(blsKeysPool)

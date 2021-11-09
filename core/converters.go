@@ -4,11 +4,13 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	elrondCore "github.com/ElrondNetwork/elrond-go/core"
+	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
 	"github.com/ElrondNetwork/elrond-go/process"
 	"github.com/ElrondNetwork/elrond-go/process/mock"
-	"github.com/ElrondNetwork/elrond-go/process/smartContract/builtInFunctions"
 	"github.com/ElrondNetwork/elrond-go/process/smartContract/hooks"
+	dataRetrieverMock "github.com/ElrondNetwork/elrond-go/testscommon/dataRetriever"
+	mockState "github.com/ElrondNetwork/elrond-go/testscommon/state"
+	vmcommonBuiltInFunctions "github.com/ElrondNetwork/elrond-vm-common/builtInFunctions"
 )
 
 // ConvertToPositiveBigInt will try to convert the provided string to its big int corresponding value. Only
@@ -57,16 +59,20 @@ func GenerateSCAddress(
 }
 
 func generateBlockchainHook(converter elrondCore.PubkeyConverter) (process.BlockChainHookHandler, error) {
-	builtInFuncs := builtInFunctions.NewBuiltInFunctionContainer()
+	builtInFuncs := vmcommonBuiltInFunctions.NewBuiltInFunctionContainer()
+	datapool := dataRetrieverMock.NewPoolsHolderMock()
 	arg := hooks.ArgBlockChainHook{
-		Accounts:         &mock.AccountsStub{},
-		PubkeyConv:       converter,
-		StorageService:   &mock.ChainStorerMock{},
-		BlockChain:       &mock.BlockChainMock{},
-		ShardCoordinator: mock.NewOneShardCoordinatorMock(),
-		Marshalizer:      &mock.MarshalizerMock{},
-		Uint64Converter:  &mock.Uint64ByteSliceConverterMock{},
-		BuiltInFunctions: builtInFuncs,
+		Accounts:           &mockState.AccountsStub{},
+		PubkeyConv:         converter,
+		StorageService:     &mock.ChainStorerMock{},
+		BlockChain:         &mock.BlockChainMock{},
+		ShardCoordinator:   mock.NewOneShardCoordinatorMock(),
+		Marshalizer:        &mock.MarshalizerMock{},
+		Uint64Converter:    &mock.Uint64ByteSliceConverterMock{},
+		BuiltInFunctions:   builtInFuncs,
+		CompiledSCPool:     datapool.SmartContracts(),
+		DataPool:           datapool,
+		NilCompiledSCStore: true,
 	}
 
 	return hooks.NewBlockChainHookImpl(arg)
