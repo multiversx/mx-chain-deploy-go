@@ -1,6 +1,6 @@
 # mx-chain-deploy-go
 
-The go implementation for the MultiversX deploy
+The go implementation for the MultiversX deployment configs generator
 
 # Getting started
 
