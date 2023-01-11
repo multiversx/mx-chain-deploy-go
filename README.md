@@ -1,6 +1,6 @@
-# Elrond deploy go
+# MultiversX deploy go
 
-The go implementation for the Elrond deploy
+The go implementation for the MultiversX deploy
 
 # Getting started
 
