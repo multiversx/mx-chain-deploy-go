@@ -3,9 +3,9 @@ package plugins
 import (
 	"fmt"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/core"
-	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go/sharding"
+	mxCore "github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-deploy-go/core"
+	"github.com/multiversx/mx-chain-go/sharding"
 )
 
 const walletKeyFileName = "walletKey.pem"
@@ -18,8 +18,8 @@ const delegatorsFileName = "delegators.pem"
 // CreateOutputHandlerArgument will create an output handler argument
 func CreateOutputHandlerArgument(
 	outputDirectory string,
-	validatorPubKeyConverter elrondCore.PubkeyConverter,
-	walletPubKeyConverter elrondCore.PubkeyConverter,
+	validatorPubKeyConverter mxCore.PubkeyConverter,
+	walletPubKeyConverter mxCore.PubkeyConverter,
 	shardCoordinator sharding.Coordinator,
 	shouldOutputTxgenAccountsFile bool,
 	shouldOutputDelegatorsFile bool,

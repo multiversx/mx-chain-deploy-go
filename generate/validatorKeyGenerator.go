@@ -3,9 +3,9 @@ package generate
 import (
 	"fmt"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	"github.com/ElrondNetwork/elrond-go-crypto"
+	"github.com/multiversx/mx-chain-core-go/core/check"
+	crypto "github.com/multiversx/mx-chain-crypto-go"
+	"github.com/multiversx/mx-chain-deploy-go/data"
 )
 
 type validatorKeyGenerator struct {

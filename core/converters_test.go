@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go-core/core/pubkeyConverter"
+	"github.com/multiversx/mx-chain-core-go/core/pubkeyConverter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

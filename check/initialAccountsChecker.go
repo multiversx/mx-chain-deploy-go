@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
-	logger "github.com/ElrondNetwork/elrond-go-logger"
-	"github.com/ElrondNetwork/elrond-go/genesis/data"
+	"github.com/multiversx/mx-chain-go/genesis/data"
+	logger "github.com/multiversx/mx-chain-logger-go"
 )
 
 var log = logger.GetOrCreate("checking")

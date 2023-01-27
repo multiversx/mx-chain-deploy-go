@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
-	"github.com/ElrondNetwork/elrond-go/sharding"
+	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-deploy-go/data"
+	mxData "github.com/multiversx/mx-chain-go/genesis/data"
+	"github.com/multiversx/mx-chain-go/sharding"
 )
 
 var minimumInitialBalance = big.NewInt(1000000000000000000) // 1eGLD
@@ -124,15 +124,15 @@ func (dsg *directStakingGenerator) computeUsedBalance(walletKeys []*data.WalletK
 func (dsg *directStakingGenerator) computeInitialAccounts(
 	walletKeys []*data.WalletKey,
 	additionalKeys []*data.WalletKey,
-) []elrondData.InitialAccount {
-	initialAccounts := make([]elrondData.InitialAccount, 0, len(walletKeys)+len(additionalKeys))
+) []mxData.InitialAccount {
+	initialAccounts := make([]mxData.InitialAccount, 0, len(walletKeys)+len(additionalKeys))
 	for _, key := range walletKeys {
-		account := elrondData.InitialAccount{
+		account := mxData.InitialAccount{
 			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
 			Supply:       big.NewInt(0).Add(key.Balance, key.StakedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0).Set(key.StakedValue),
-			Delegation: &elrondData.DelegationData{
+			Delegation: &mxData.DelegationData{
 				Address: "",
 				Value:   big.NewInt(0),
 			},
@@ -142,12 +142,12 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range additionalKeys {
-		account := elrondData.InitialAccount{
+		account := mxData.InitialAccount{
 			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
-			Delegation: &elrondData.DelegationData{
+			Delegation: &mxData.DelegationData{
 				Address: "",
 				Value:   big.NewInt(0),
 			},

@@ -3,8 +3,8 @@ package generate
 import (
 	"math/big"
 
-	"github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-crypto"
+	"github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-crypto-go"
 )
 
 // ArgDirectStakingGenerator is the argument used in direct staking mechanism
