@@ -3,9 +3,9 @@ package generate
 import (
 	"math/big"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go/sharding"
+	"github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-deploy-go/data"
+	"github.com/multiversx/mx-chain-go/sharding"
 )
 
 type baseGenerator struct {

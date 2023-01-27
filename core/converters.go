@@ -4,13 +4,17 @@ import (
 	"encoding/hex"
 	"math/big"
 
-	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go/process"
-	"github.com/ElrondNetwork/elrond-go/process/mock"
-	"github.com/ElrondNetwork/elrond-go/process/smartContract/hooks"
-	dataRetrieverMock "github.com/ElrondNetwork/elrond-go/testscommon/dataRetriever"
-	mockState "github.com/ElrondNetwork/elrond-go/testscommon/state"
-	vmcommonBuiltInFunctions "github.com/ElrondNetwork/elrond-vm-common/builtInFunctions"
+	mxCore "github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-go/config"
+	"github.com/multiversx/mx-chain-go/process"
+	"github.com/multiversx/mx-chain-go/process/mock"
+	"github.com/multiversx/mx-chain-go/process/smartContract/hooks"
+	"github.com/multiversx/mx-chain-go/testscommon"
+	dataRetrieverMock "github.com/multiversx/mx-chain-go/testscommon/dataRetriever"
+	"github.com/multiversx/mx-chain-go/testscommon/epochNotifier"
+	"github.com/multiversx/mx-chain-go/testscommon/genericMocks"
+	mockState "github.com/multiversx/mx-chain-go/testscommon/state"
+	vmcommonBuiltInFunctions "github.com/multiversx/mx-chain-vm-common-go/builtInFunctions"
 )
 
 // ConvertToPositiveBigInt will try to convert the provided string to its big int corresponding value. Only
@@ -33,7 +37,7 @@ func GenerateSCAddress(
 	pkString string,
 	nonce uint64,
 	vmType string,
-	converter elrondCore.PubkeyConverter,
+	converter mxCore.PubkeyConverter,
 ) (string, error) {
 	blockchainHook, err := generateBlockchainHook(converter)
 	if err != nil {
@@ -58,21 +62,38 @@ func GenerateSCAddress(
 	return converter.Encode(scResultingAddressBytes), nil
 }
 
-func generateBlockchainHook(converter elrondCore.PubkeyConverter) (process.BlockChainHookHandler, error) {
+func generateBlockchainHook(converter mxCore.PubkeyConverter) (process.BlockChainHookHandler, error) {
 	builtInFuncs := vmcommonBuiltInFunctions.NewBuiltInFunctionContainer()
 	datapool := dataRetrieverMock.NewPoolsHolderMock()
 	arg := hooks.ArgBlockChainHook{
-		Accounts:           &mockState.AccountsStub{},
-		PubkeyConv:         converter,
-		StorageService:     &mock.ChainStorerMock{},
-		BlockChain:         &mock.BlockChainMock{},
-		ShardCoordinator:   mock.NewOneShardCoordinatorMock(),
-		Marshalizer:        &mock.MarshalizerMock{},
-		Uint64Converter:    &mock.Uint64ByteSliceConverterMock{},
-		BuiltInFunctions:   builtInFuncs,
-		CompiledSCPool:     datapool.SmartContracts(),
-		DataPool:           datapool,
-		NilCompiledSCStore: true,
+		Accounts:              &mockState.AccountsStub{},
+		PubkeyConv:            converter,
+		StorageService:        genericMocks.NewChainStorerMock(0),
+		DataPool:              datapool,
+		BlockChain:            &testscommon.ChainHandlerMock{},
+		ShardCoordinator:      mock.NewOneShardCoordinatorMock(),
+		Marshalizer:           &mock.MarshalizerMock{},
+		Uint64Converter:       &mock.Uint64ByteSliceConverterMock{},
+		BuiltInFunctions:      builtInFuncs,
+		NFTStorageHandler:     &testscommon.SimpleNFTStorageHandlerStub{},
+		GlobalSettingsHandler: &testscommon.ESDTGlobalSettingsHandlerStub{},
+		CompiledSCPool:        datapool.SmartContracts(),
+		ConfigSCStorage:       config.StorageConfig{},
+		EnableEpochs:          config.EnableEpochs{},
+		EpochNotifier:         &epochNotifier.EpochNotifierStub{},
+		EnableEpochsHandler:   &testscommon.EnableEpochsHandlerStub{},
+		WorkingDir:            "",
+		NilCompiledSCStore:    true,
+		GasSchedule: &testscommon.GasScheduleNotifierMock{
+			GasSchedule: make(map[string]map[string]uint64),
+			LatestGasScheduleCalled: func() map[string]map[string]uint64 {
+				return make(map[string]map[string]uint64)
+			},
+			LatestGasScheduleCopyCalled: func() map[string]map[string]uint64 {
+				return make(map[string]map[string]uint64)
+			},
+		},
+		Counter: &testscommon.BlockChainHookCounterStub{},
 	}
 
 	return hooks.NewBlockChainHookImpl(arg)

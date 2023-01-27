@@ -39,11 +39,11 @@ all available balance left after the staking process occurred. This is helpful w
 
 ### Running with docker
 ```
-$ docker pull elrondnetwork/elrond-go-filegen:tagname
-$ docker run -v /tmp/:/data/ elrondnetwork/elrond-go-filegen:latest -stake-type direct -node-price 2500000000000000000000 -total-supply 20000000000000000000000000 -num-of-shards 3 ...
+$ docker pull multiversx/mx-chain-filegen:tagname
+$ docker run -v /tmp/:/data/ multiversx/mx-chain-filegen:latest -stake-type direct -node-price 2500000000000000000000 -total-supply 20000000000000000000000000 -num-of-shards 3 ...
 ```
 This will create the files on the host machine running Docker at the path location `/tmp/`.
-Detailed information about the build is located under https://hub.docker.com/r/elrondnetwork/elrond-go-filegen
+Detailed information about the build is located under https://hub.docker.com/r/multiversx/mx-chain-filegen
  
 ## Running the tests
 ```

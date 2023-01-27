@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ElrondNetwork/elrond-go/genesis/data"
+	"github.com/multiversx/mx-chain-go/genesis/data"
 	"github.com/stretchr/testify/assert"
 )
 
