@@ -6,7 +6,7 @@ The go implementation for the MultiversX deployment configs generator
 
 ## Prerequisites
 
-Building the repository requires Go (version 1.12 or later)
+Building the repository requires Go (version 1.17 or later)
 
 ## Installation and running
 
