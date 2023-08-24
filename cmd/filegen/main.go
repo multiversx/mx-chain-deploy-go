@@ -247,18 +247,15 @@ func generate(ctx *cli.Context) error {
 
 	invalidNumPrivPubKey := numValidators < 1 ||
 		numOfShardsValue < 1 ||
-		numOfNodesPerShardValue < 1 ||
-		numOfMetachainNodesValue < 1
+		numOfNodesPerShardValue < 1
 	if invalidNumPrivPubKey {
 		return errInvalidNumPrivPubKeys
 	}
 
 	invalidNumOfNodes := consensusGroupSizeValue < 1 ||
 		consensusGroupSizeValue > numOfNodesPerShardValue ||
-		numOfObserversPerShardValue < 0 ||
-		metachainConsensusGroupSizeValue < 1 ||
-		metachainConsensusGroupSizeValue > numOfMetachainNodesValue ||
-		numOfMetachainObserversValue < 0
+		numOfObserversPerShardValue < 0
+
 	if invalidNumOfNodes {
 		return errInvalidNumOfNodes
 	}
