@@ -154,7 +154,7 @@ VERSION:
 	}
 	sovereignConfig = cli.BoolFlag{
 		Name:  "sovereign",
-		Usage: "if this flag is set, meta config checks(consensus size/observers, etc.)  will be ignored",
+		Usage: "if this flag is set, meta config checks(consensus size/observers, etc.) will be ignored",
 	}
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
@@ -215,40 +215,40 @@ func main() {
 	}
 }
 
-func isNumPrivatePubKeyValid(numValidators int, ctx *cli.Context) bool {
+func isNumPrivatePubKeyInvalid(numValidators int, ctx *cli.Context) bool {
 	numOfShardsValue := ctx.GlobalInt(numOfShards.Name)
 	numOfNodesPerShardValue := ctx.GlobalInt(numOfNodesPerShard.Name)
 	isSovereignConfig := ctx.GlobalBool(sovereignConfig.Name)
 
-	isNumShardValidatorsValid := numValidators < 1 ||
+	isNumShardValidatorsInvalid := numValidators < 1 ||
 		numOfShardsValue < 1 ||
 		numOfNodesPerShardValue < 1
 	if isSovereignConfig {
-		return isNumShardValidatorsValid
+		return isNumShardValidatorsInvalid
 	}
 
 	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
-	return isNumShardValidatorsValid || numOfMetachainNodesValue < 1
+	return isNumShardValidatorsInvalid || numOfMetachainNodesValue < 1
 }
 
-func isNumOfNodesValid(ctx *cli.Context) bool {
+func isNumOfNodesInvalid(ctx *cli.Context) bool {
 	consensusGroupSizeValue := ctx.GlobalInt(consensusGroupSize.Name)
 	numOfNodesPerShardValue := ctx.GlobalInt(numOfNodesPerShard.Name)
 	numOfObserversPerShardValue := ctx.GlobalInt(numOfObserversPerShard.Name)
 	isSovereignConfig := ctx.GlobalBool(sovereignConfig.Name)
 
-	isNumShardNodesValid := consensusGroupSizeValue < 1 ||
+	isNumShardNodesInvalid := consensusGroupSizeValue < 1 ||
 		consensusGroupSizeValue > numOfNodesPerShardValue ||
 		numOfObserversPerShardValue < 0
 	if isSovereignConfig {
-		return isNumShardNodesValid
+		return isNumShardNodesInvalid
 	}
 
 	metachainConsensusGroupSizeValue := ctx.GlobalInt(metachainConsensusGroupSize.Name)
 	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
 	numOfMetachainObserversValue := ctx.GlobalInt(numOfMetachainObservers.Name)
 
-	return isNumShardNodesValid || metachainConsensusGroupSizeValue < 1 ||
+	return isNumShardNodesInvalid || metachainConsensusGroupSizeValue < 1 ||
 		metachainConsensusGroupSizeValue > numOfMetachainNodesValue ||
 		numOfMetachainObserversValue < 0
 }
@@ -288,11 +288,11 @@ func generate(ctx *cli.Context) error {
 	numValidators := numShardValidators + numValidatorsOnMeta
 	numObservers := numOfShardsValue*numOfObserversPerShardValue + numOfMetachainObserversValue
 
-	if !isNumPrivatePubKeyValid(numValidators, ctx) {
+	if isNumPrivatePubKeyInvalid(numValidators, ctx) {
 		return errInvalidNumPrivPubKeys
 	}
 
-	if !isNumOfNodesValid(ctx) {
+	if isNumOfNodesInvalid(ctx) {
 		return errInvalidNumOfNodes
 	}
 
