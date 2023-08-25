@@ -219,16 +219,15 @@ func isNumPrivatePubKeyInvalid(numValidators int, ctx *cli.Context) bool {
 	numOfShardsValue := ctx.GlobalInt(numOfShards.Name)
 	numOfNodesPerShardValue := ctx.GlobalInt(numOfNodesPerShard.Name)
 	isSovereignConfig := ctx.GlobalBool(sovereignConfig.Name)
+	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
 
 	isNumShardValidatorsInvalid := numValidators < 1 ||
-		numOfShardsValue < 1 ||
 		numOfNodesPerShardValue < 1
 	if isSovereignConfig {
-		return isNumShardValidatorsInvalid
+		return isNumShardValidatorsInvalid || numOfMetachainNodesValue != 0 || numOfShardsValue != 1
 	}
 
-	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
-	return isNumShardValidatorsInvalid || numOfMetachainNodesValue < 1
+	return isNumShardValidatorsInvalid || numOfMetachainNodesValue < 1 || numOfShardsValue < 1
 }
 
 func isNumOfNodesInvalid(ctx *cli.Context) bool {
@@ -236,17 +235,18 @@ func isNumOfNodesInvalid(ctx *cli.Context) bool {
 	numOfNodesPerShardValue := ctx.GlobalInt(numOfNodesPerShard.Name)
 	numOfObserversPerShardValue := ctx.GlobalInt(numOfObserversPerShard.Name)
 	isSovereignConfig := ctx.GlobalBool(sovereignConfig.Name)
+	metachainConsensusGroupSizeValue := ctx.GlobalInt(metachainConsensusGroupSize.Name)
+	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
+	numOfMetachainObserversValue := ctx.GlobalInt(numOfMetachainObservers.Name)
 
 	isNumShardNodesInvalid := consensusGroupSizeValue < 1 ||
 		consensusGroupSizeValue > numOfNodesPerShardValue ||
 		numOfObserversPerShardValue < 0
-	if isSovereignConfig {
-		return isNumShardNodesInvalid
-	}
 
-	metachainConsensusGroupSizeValue := ctx.GlobalInt(metachainConsensusGroupSize.Name)
-	numOfMetachainNodesValue := ctx.GlobalInt(numOfMetachainNodes.Name)
-	numOfMetachainObserversValue := ctx.GlobalInt(numOfMetachainObservers.Name)
+	if isSovereignConfig {
+		return isNumShardNodesInvalid || metachainConsensusGroupSizeValue != 0 ||
+			numOfMetachainNodesValue != 0 || numOfMetachainObserversValue != 0
+	}
 
 	return isNumShardNodesInvalid || metachainConsensusGroupSizeValue < 1 ||
 		metachainConsensusGroupSizeValue > numOfMetachainNodesValue ||
