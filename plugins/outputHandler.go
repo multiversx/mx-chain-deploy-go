@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/data"
-	"github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-core/core/check"
-	logger "github.com/ElrondNetwork/elrond-go-logger"
-	elrondData "github.com/ElrondNetwork/elrond-go/genesis/data"
-	"github.com/ElrondNetwork/elrond-go/sharding"
+	"github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-core-go/core/check"
+	"github.com/multiversx/mx-chain-deploy-go/data"
+	mxData "github.com/multiversx/mx-chain-go/genesis/data"
+	"github.com/multiversx/mx-chain-go/sharding"
+	logger "github.com/multiversx/mx-chain-logger-go"
 )
 
 var log = logger.GetOrCreate("io")
@@ -118,7 +118,7 @@ func (oh *outputHandler) writeNodesSetup(
 }
 
 // writeGenesisFile will write the provided initial accounts to the genesis file
-func (oh *outputHandler) writeGenesisFile(initialAccounts []elrondData.InitialAccount) error {
+func (oh *outputHandler) writeGenesisFile(initialAccounts []mxData.InitialAccount) error {
 	return oh.genesisHandler.WriteObjectInFile(initialAccounts)
 }
 

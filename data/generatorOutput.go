@@ -1,8 +1,8 @@
 package data
 
 import (
-	"github.com/ElrondNetwork/elrond-go/genesis/data"
-	"github.com/ElrondNetwork/elrond-go/sharding"
+	"github.com/multiversx/mx-chain-go/genesis/data"
+	"github.com/multiversx/mx-chain-go/sharding"
 )
 
 // GeneratorOutput represents the structure that will contain aggregated generated data

@@ -7,20 +7,20 @@ import (
 	"os"
 	"time"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/check"
-	"github.com/ElrondNetwork/elrond-deploy-go/core"
-	"github.com/ElrondNetwork/elrond-deploy-go/generate/factory"
-	"github.com/ElrondNetwork/elrond-deploy-go/plugins"
-	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-core/core/random"
-	crypto "github.com/ElrondNetwork/elrond-go-crypto"
-	"github.com/ElrondNetwork/elrond-go-crypto/signing"
-	"github.com/ElrondNetwork/elrond-go-crypto/signing/ed25519"
-	"github.com/ElrondNetwork/elrond-go-crypto/signing/mcl"
-	logger "github.com/ElrondNetwork/elrond-go-logger"
-	elrondCommonFactory "github.com/ElrondNetwork/elrond-go/common/factory"
-	"github.com/ElrondNetwork/elrond-go/config"
-	"github.com/ElrondNetwork/elrond-go/sharding"
+	mxCore "github.com/multiversx/mx-chain-core-go/core"
+	"github.com/multiversx/mx-chain-core-go/core/random"
+	crypto "github.com/multiversx/mx-chain-crypto-go"
+	"github.com/multiversx/mx-chain-crypto-go/signing"
+	"github.com/multiversx/mx-chain-crypto-go/signing/ed25519"
+	"github.com/multiversx/mx-chain-crypto-go/signing/mcl"
+	"github.com/multiversx/mx-chain-deploy-go/check"
+	"github.com/multiversx/mx-chain-deploy-go/core"
+	"github.com/multiversx/mx-chain-deploy-go/generate/factory"
+	"github.com/multiversx/mx-chain-deploy-go/plugins"
+	mxCommonFactory "github.com/multiversx/mx-chain-go/common/factory"
+	"github.com/multiversx/mx-chain-go/config"
+	"github.com/multiversx/mx-chain-go/sharding"
+	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/urfave/cli"
 )
 
@@ -199,8 +199,8 @@ func main() {
 	}
 	app.Authors = []cli.Author{
 		{
-			Name:  "The Elrond Team",
-			Email: "contact@elrond.com",
+			Name:  "The MultiversX Team",
+			Email: "contact@multiversx.com",
 		},
 	}
 
@@ -403,8 +403,8 @@ func prepareOutputDirectory(outputDirectory string) error {
 	return err
 }
 
-func createPubKeyConverters() (elrondCore.PubkeyConverter, elrondCore.PubkeyConverter, error) {
-	walletPubKeyConverter, err := elrondCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
+func createPubKeyConverters() (mxCore.PubkeyConverter, mxCore.PubkeyConverter, error) {
+	walletPubKeyConverter, err := mxCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32,
 		Type:   walletPubKeyFormat,
 	})
@@ -412,7 +412,7 @@ func createPubKeyConverters() (elrondCore.PubkeyConverter, elrondCore.PubkeyConv
 		return nil, nil, fmt.Errorf("%w for walletPubKeyConverter", err)
 	}
 
-	validatorPubKeyConverter, err := elrondCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
+	validatorPubKeyConverter, err := mxCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 96,
 		Type:   validatorPubKeyFormat,
 	})

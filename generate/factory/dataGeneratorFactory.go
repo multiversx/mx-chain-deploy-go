@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ElrondNetwork/elrond-deploy-go/core"
-	"github.com/ElrondNetwork/elrond-deploy-go/generate"
-	elrondCore "github.com/ElrondNetwork/elrond-go-core/core"
-	"github.com/ElrondNetwork/elrond-go-crypto"
+	mxCore "github.com/multiversx/mx-chain-core-go/core"
+	crypto "github.com/multiversx/mx-chain-crypto-go"
+	"github.com/multiversx/mx-chain-deploy-go/core"
+	"github.com/multiversx/mx-chain-deploy-go/generate"
 )
 
 // ArgDataGenerator is the argument used by the data generator method factory
 type ArgDataGenerator struct {
 	KeyGeneratorForValidators crypto.KeyGenerator
 	KeyGeneratorForWallets    crypto.KeyGenerator
-	WalletPubKeyConverter     elrondCore.PubkeyConverter
-	ValidatorPubKeyConverter  elrondCore.PubkeyConverter
+	WalletPubKeyConverter     mxCore.PubkeyConverter
+	ValidatorPubKeyConverter  mxCore.PubkeyConverter
 	NumValidatorBlsKeys       uint
 	NumObserverBlsKeys        uint
 	RichestAccountMode        bool

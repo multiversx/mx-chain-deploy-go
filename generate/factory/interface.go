@@ -1,6 +1,6 @@
 package factory
 
-import "github.com/ElrondNetwork/elrond-deploy-go/data"
+import "github.com/multiversx/mx-chain-deploy-go/data"
 
 // DataGenerator represents a structure that can generate genesis data
 type DataGenerator interface {
