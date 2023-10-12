@@ -6,7 +6,10 @@ import (
 	"github.com/multiversx/mx-chain-core-go/core"
 	"github.com/multiversx/mx-chain-deploy-go/data"
 	"github.com/multiversx/mx-chain-go/sharding"
+	logger "github.com/multiversx/mx-chain-logger-go"
 )
+
+var log = logger.GetOrCreate("generate")
 
 type baseGenerator struct {
 	vkg                      *validatorKeyGenerator
@@ -62,8 +65,8 @@ func (bg *baseGenerator) computeInitialNodesForWalletKey(key *data.WalletKey) []
 
 	for _, blsKey := range key.BlsKeys {
 		initialNode := &sharding.InitialNode{
-			PubKey:        bg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
-			Address:       bg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			PubKey:        bg.validatorPubKeyConverter.SilentEncode(blsKey.PubKeyBytes, log),
+			Address:       bg.walletPubKeyConverter.SilentEncode(key.PubKeyBytes, log),
 			InitialRating: bg.initialRating,
 		}
 		initialNodes = append(initialNodes, initialNode)

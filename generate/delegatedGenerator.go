@@ -111,12 +111,12 @@ func (dsg *delegatedStakingGenerator) computeInitialAccounts(
 
 	for _, key := range delegators {
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      dsg.walletPubKeyConverter.SilentEncode(key.PubKeyBytes, log),
 			Supply:       big.NewInt(0).Add(key.Balance, key.DelegatedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
 			Delegation: &mxData.DelegationData{
-				Address: dsg.walletPubKeyConverter.Encode(key.DelegatedPubKeyBytes),
+				Address: dsg.walletPubKeyConverter.SilentEncode(key.DelegatedPubKeyBytes, log),
 				Value:   big.NewInt(0).Set(key.DelegatedValue),
 			},
 		}
@@ -126,7 +126,7 @@ func (dsg *delegatedStakingGenerator) computeInitialAccounts(
 
 	for _, key := range walletKeys {
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      dsg.walletPubKeyConverter.SilentEncode(key.PubKeyBytes, log),
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
@@ -141,7 +141,7 @@ func (dsg *delegatedStakingGenerator) computeInitialAccounts(
 
 	for _, key := range additionalKeys {
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      dsg.walletPubKeyConverter.SilentEncode(key.PubKeyBytes, log),
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
@@ -162,7 +162,7 @@ func (dsg *delegatedStakingGenerator) computeInitialNodes(validators []*data.Bls
 
 	for _, blsKey := range validators {
 		initialNode := &sharding.InitialNode{
-			PubKey:        dsg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
+			PubKey:        dsg.validatorPubKeyConverter.SilentEncode(blsKey.PubKeyBytes, log),
 			Address:       dsg.delegationScPkString,
 			InitialRating: dsg.initialRating,
 		}

@@ -9,7 +9,6 @@ import (
 	"github.com/multiversx/mx-chain-crypto-go/signing/ed25519"
 	"github.com/multiversx/mx-chain-crypto-go/signing/mcl"
 	"github.com/multiversx/mx-chain-deploy-go/check"
-	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +30,7 @@ func createMockDelegatedStakingGeneratorArguments() ArgDelegatedStakingGenerator
 		VmType:                    "0500",
 		NumDelegators:             0,
 	}
-	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, logger.GetOrCreate("test"))
+	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, "erd")
 	arg.ValidatorPubKeyConverter, _ = pubkeyConverter.NewHexPubkeyConverter(96)
 	arg.TotalSupply = big.NewInt(0)
 	arg.TotalSupply.SetString("20000000000000000000000000", 10)

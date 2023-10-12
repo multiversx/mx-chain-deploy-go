@@ -327,7 +327,7 @@ func generate(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	argOutputHandler.RoundDuration = defaultRoundDuration
+	argOutputHandler.RoundDuration = 3000
 	argOutputHandler.ConsensusGroupSize = consensusGroupSizeValue
 	argOutputHandler.NumOfNodesPerShard = numOfNodesPerShardValue
 	argOutputHandler.MetachainConsensusGroupSize = metachainConsensusGroupSizeValue
@@ -407,6 +407,7 @@ func createPubKeyConverters() (mxCore.PubkeyConverter, mxCore.PubkeyConverter, e
 	walletPubKeyConverter, err := mxCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32,
 		Type:   walletPubKeyFormat,
+		Hrp:    "erd",
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w for walletPubKeyConverter", err)
