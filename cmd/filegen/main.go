@@ -24,7 +24,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-const defaultRoundDuration = 5000
 const walletPubKeyFormat = "bech32"
 const validatorPubKeyFormat = "hex"
 const vmType = "0500"
@@ -152,6 +151,11 @@ VERSION:
 			"This flag is useful in tests involving automated stake events. All other account will still" +
 			"receive 1eGLD in order to complete some transactions (unstake, for instance)",
 	}
+	roundDuration = cli.UintFlag{
+		Name:  "round-duration",
+		Usage: "round duration in miliseconds",
+		Value: 5000,
+	}
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
@@ -191,6 +195,7 @@ func main() {
 		richestAccount,
 		numDelegatedNodes,
 		maxNumValidatorsPerOwner,
+		roundDuration,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -233,6 +238,7 @@ func generate(ctx *cli.Context) error {
 	delegationOwnerPkString := ctx.GlobalString(delegationOwnerPublicKey.Name)
 	numDelegatedNodesValue := ctx.GlobalUint(numDelegatedNodes.Name)
 	maxNumValidatorsPerOwnerValue := ctx.GlobalUint(maxNumValidatorsPerOwner.Name)
+	roundDurationValue := ctx.GlobalUint(roundDuration.Name)
 
 	err = prepareOutputDirectory(outputDirectory)
 	if err != nil {
@@ -294,7 +300,7 @@ func generate(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	argOutputHandler.RoundDuration = defaultRoundDuration
+	argOutputHandler.RoundDuration = uint64(roundDurationValue)
 	argOutputHandler.ConsensusGroupSize = consensusGroupSizeValue
 	argOutputHandler.NumOfNodesPerShard = numOfNodesPerShardValue
 	argOutputHandler.MetachainConsensusGroupSize = metachainConsensusGroupSizeValue
