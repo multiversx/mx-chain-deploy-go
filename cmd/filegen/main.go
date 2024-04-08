@@ -154,7 +154,7 @@ VERSION:
 	roundDuration = cli.UintFlag{
 		Name:  "round-duration",
 		Usage: "round duration in miliseconds",
-		Value: 5000,
+		Value: 6000,
 	}
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
