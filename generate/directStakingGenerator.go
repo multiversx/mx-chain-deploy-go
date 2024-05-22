@@ -156,6 +156,8 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 		initialAccounts = append(initialAccounts, account)
 	}
 
+	adjustInitialAccounts(initialAccounts)
+
 	return initialAccounts
 }
 
