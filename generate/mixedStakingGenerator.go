@@ -178,6 +178,8 @@ func (msg *mixedStakingGenerator) computeInitialAccounts(
 		initialAccounts = append(initialAccounts, account)
 	}
 
+	adjustInitialAccounts(initialAccounts)
+
 	return initialAccounts
 }
 
