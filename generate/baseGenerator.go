@@ -63,6 +63,7 @@ func (bg *baseGenerator) computeInitialNodesForWalletKey(key *data.WalletKey) []
 	for _, blsKey := range key.BlsKeys {
 		validatorPubKey, _ := bg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes)
 		walletAddress, _ := bg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+
 		initialNode := &sharding.InitialNode{
 			PubKey:        validatorPubKey,
 			Address:       walletAddress,
