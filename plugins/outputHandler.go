@@ -130,7 +130,7 @@ func (oh *outputHandler) writeValidatorKeys(
 	keys := append(validatorKeys, observerKeys...)
 
 	for _, key := range keys {
-		pkString := oh.validatorPubKeyConverter.Encode(key.PubKeyBytes)
+		pkString, _ := oh.validatorPubKeyConverter.Encode(key.PubKeyBytes)
 
 		err := oh.validatorKeyHandler.SaveSkToPemFile(pkString, key.PrivKeyBytes)
 		if err != nil {
@@ -144,7 +144,7 @@ func (oh *outputHandler) writeValidatorKeys(
 // writeWalletKeys will write the wallet keys
 func (oh *outputHandler) writeWalletKeys(walletKeys []*data.WalletKey) error {
 	for _, key := range walletKeys {
-		pkString := oh.walletPubKeyConverter.Encode(key.PubKeyBytes)
+		pkString, _ := oh.walletPubKeyConverter.Encode(key.PubKeyBytes)
 
 		err := oh.walletHandler.SaveSkToPemFile(pkString, key.PrivKeyBytes)
 		if err != nil {
@@ -163,7 +163,7 @@ func (oh *outputHandler) writeDelegatorKeys(delegatorKeys []*data.WalletKey) err
 	}
 
 	for _, key := range delegatorKeys {
-		pkString := oh.walletPubKeyConverter.Encode(key.PubKeyBytes)
+		pkString, _ := oh.walletPubKeyConverter.Encode(key.PubKeyBytes)
 
 		err := oh.delegatorsHandler.SaveSkToPemFile(pkString, key.PrivKeyBytes)
 		if err != nil {
@@ -184,7 +184,7 @@ func (oh *outputHandler) writeTxGenAccounts(additionalKeys []*data.WalletKey) er
 	txgenAccounts := make(map[uint32][]*txgenAccount)
 	for _, key := range additionalKeys {
 		shardID := oh.shardCoordinator.ComputeId(key.PubKeyBytes)
-		pkString := oh.walletPubKeyConverter.Encode(key.PubKeyBytes)
+		pkString, _ := oh.walletPubKeyConverter.Encode(key.PubKeyBytes)
 
 		txGenAccount := &txgenAccount{
 			PubKey:        pkString,

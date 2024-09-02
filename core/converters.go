@@ -11,6 +11,7 @@ import (
 	"github.com/multiversx/mx-chain-go/process/smartContract/hooks"
 	"github.com/multiversx/mx-chain-go/testscommon"
 	dataRetrieverMock "github.com/multiversx/mx-chain-go/testscommon/dataRetriever"
+	"github.com/multiversx/mx-chain-go/testscommon/enableEpochsHandlerMock"
 	"github.com/multiversx/mx-chain-go/testscommon/epochNotifier"
 	"github.com/multiversx/mx-chain-go/testscommon/genericMocks"
 	mockState "github.com/multiversx/mx-chain-go/testscommon/state"
@@ -59,7 +60,12 @@ func GenerateSCAddress(
 		return "", err
 	}
 
-	return converter.Encode(scResultingAddressBytes), nil
+	encodedAddress, err := converter.Encode(scResultingAddressBytes)
+	if err != nil {
+		return "", nil
+	}
+
+	return encodedAddress, nil
 }
 
 func generateBlockchainHook(converter mxCore.PubkeyConverter) (process.BlockChainHookHandler, error) {
@@ -81,7 +87,7 @@ func generateBlockchainHook(converter mxCore.PubkeyConverter) (process.BlockChai
 		ConfigSCStorage:       config.StorageConfig{},
 		EnableEpochs:          config.EnableEpochs{},
 		EpochNotifier:         &epochNotifier.EpochNotifierStub{},
-		EnableEpochsHandler:   &testscommon.EnableEpochsHandlerStub{},
+		EnableEpochsHandler:   &enableEpochsHandlerMock.EnableEpochsHandlerStub{},
 		WorkingDir:            "",
 		NilCompiledSCStore:    true,
 		GasSchedule: &testscommon.GasScheduleNotifierMock{
@@ -93,7 +99,8 @@ func generateBlockchainHook(converter mxCore.PubkeyConverter) (process.BlockChai
 				return make(map[string]map[string]uint64)
 			},
 		},
-		Counter: &testscommon.BlockChainHookCounterStub{},
+		Counter:                  &testscommon.BlockChainHookCounterStub{},
+		MissingTrieNodesNotifier: &testscommon.MissingTrieNodesNotifierStub{},
 	}
 
 	return hooks.NewBlockChainHookImpl(arg)
