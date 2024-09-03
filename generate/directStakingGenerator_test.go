@@ -10,7 +10,6 @@ import (
 	"github.com/multiversx/mx-chain-crypto-go/signing/mcl"
 	"github.com/multiversx/mx-chain-deploy-go/check"
 	"github.com/multiversx/mx-chain-deploy-go/mock"
-	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +31,7 @@ func createMockDirectStakingGeneratorArguments() ArgDirectStakingGenerator {
 		TotalSupply:               big.NewInt(20000000),
 		InitialRating:             50,
 	}
-	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, logger.GetOrCreate("test"))
+	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, "erd")
 	arg.ValidatorPubKeyConverter, _ = pubkeyConverter.NewHexPubkeyConverter(96)
 
 	return arg

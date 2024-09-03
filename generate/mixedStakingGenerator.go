@@ -134,13 +134,16 @@ func (msg *mixedStakingGenerator) computeInitialAccounts(
 	initialAccounts := make([]mxData.InitialAccount, 0, len(walletKeys)+len(additionalKeys))
 
 	for _, key := range delegators {
+		delegatorAddress, _ := msg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+		delegatedAddress, _ := msg.walletPubKeyConverter.Encode(key.DelegatedPubKeyBytes)
+
 		account := mxData.InitialAccount{
-			Address:      msg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      delegatorAddress,
 			Supply:       big.NewInt(0).Add(key.Balance, key.DelegatedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
 			Delegation: &mxData.DelegationData{
-				Address: msg.walletPubKeyConverter.Encode(key.DelegatedPubKeyBytes),
+				Address: delegatedAddress,
 				Value:   big.NewInt(0).Set(key.DelegatedValue),
 			},
 		}
@@ -149,8 +152,10 @@ func (msg *mixedStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range walletKeys {
+		walletAddress, _ := msg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+
 		account := mxData.InitialAccount{
-			Address:      msg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      walletAddress,
 			Supply:       big.NewInt(0).Add(key.Balance, key.StakedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: key.StakedValue,
@@ -164,8 +169,10 @@ func (msg *mixedStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range additionalKeys {
+		walletAddress, _ := msg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+
 		account := mxData.InitialAccount{
-			Address:      msg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      walletAddress,
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
@@ -187,9 +194,10 @@ func (msg *mixedStakingGenerator) computeInitialNodes(validators []*data.BlsKey,
 	// delegated nodes
 	for i := uint(0); i < msg.numDelegatedNodes; i++ {
 		blsKey := validators[i]
+		nodeAddress, _ := msg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes)
 
 		initialNode := &sharding.InitialNode{
-			PubKey:        msg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
+			PubKey:        nodeAddress,
 			Address:       msg.delegationScPkString,
 			InitialRating: msg.initialRating,
 		}

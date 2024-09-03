@@ -37,7 +37,7 @@ func TestConvertToPositiveBigInt_ShouldWork(t *testing.T) {
 func TestGenerateSCAddress_ShouldWork(t *testing.T) {
 	t.Parallel()
 
-	pkConv, _ := pubkeyConverter.NewBech32PubkeyConverter(32, log)
+	pkConv, _ := pubkeyConverter.NewBech32PubkeyConverter(32, "erd")
 	scAddress, err := GenerateSCAddress(
 		"erd1ulhw20j7jvgfgak5p05kv667k5k9f320sgef5ayxkt9784ql0zssrzyhjp",
 		0,

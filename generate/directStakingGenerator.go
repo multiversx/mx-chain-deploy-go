@@ -127,8 +127,10 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 ) []mxData.InitialAccount {
 	initialAccounts := make([]mxData.InitialAccount, 0, len(walletKeys)+len(additionalKeys))
 	for _, key := range walletKeys {
+		walletAddress, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      walletAddress,
 			Supply:       big.NewInt(0).Add(key.Balance, key.StakedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0).Set(key.StakedValue),
@@ -142,8 +144,10 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range additionalKeys {
+		walletAddress, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      walletAddress,
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
