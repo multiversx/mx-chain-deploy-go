@@ -13,21 +13,23 @@ import (
 	"github.com/multiversx/mx-chain-crypto-go/signing"
 	"github.com/multiversx/mx-chain-crypto-go/signing/ed25519"
 	"github.com/multiversx/mx-chain-crypto-go/signing/mcl"
-	"github.com/multiversx/mx-chain-deploy-go/check"
-	"github.com/multiversx/mx-chain-deploy-go/core"
-	"github.com/multiversx/mx-chain-deploy-go/generate/factory"
-	"github.com/multiversx/mx-chain-deploy-go/plugins"
 	mxCommonFactory "github.com/multiversx/mx-chain-go/common/factory"
 	"github.com/multiversx/mx-chain-go/config"
 	"github.com/multiversx/mx-chain-go/sharding"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/urfave/cli"
+
+	"github.com/multiversx/mx-chain-deploy-go/check"
+	"github.com/multiversx/mx-chain-deploy-go/core"
+	"github.com/multiversx/mx-chain-deploy-go/generate/factory"
+	"github.com/multiversx/mx-chain-deploy-go/plugins"
 )
 
 const walletPubKeyFormat = "bech32"
 const validatorPubKeyFormat = "hex"
 const vmType = "0500"
 const delegationOwnerNonce = uint64(0)
+const egldHrp = "erd"
 
 var (
 	fileGenHelpTemplate = `NAME:
@@ -282,6 +284,10 @@ func generate(ctx *cli.Context) error {
 	}
 
 	validatorPubKeyConverter, walletPubKeyConverter, err := createPubKeyConverters()
+	if err != nil {
+		return err
+	}
+
 	validatorKeyGenerator, walletKeyGenerator := createKeyGenerators()
 
 	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShardsValue), 0)
@@ -380,6 +386,7 @@ func createPubKeyConverters() (mxCore.PubkeyConverter, mxCore.PubkeyConverter, e
 	walletPubKeyConverter, err := mxCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32,
 		Type:   walletPubKeyFormat,
+		Hrp:    egldHrp,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w for walletPubKeyConverter", err)
