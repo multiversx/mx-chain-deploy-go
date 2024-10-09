@@ -30,14 +30,17 @@ func checkDelegatedStakingArgument(arg ArgDelegatedStakingGenerator) error {
 	return nil
 }
 
-func (dbs *delegatedBaseGenerator) prepareFieldsFromArguments(arg ArgDelegatedStakingGenerator, randomizer IntRandomizer) error {
+func (dbs *delegatedBaseGenerator) prepareFieldsFromArguments(
+	arg ArgDelegatedStakingGenerator,
+	randomizer IntRandomizer,
+) error {
 	var err error
 	dbs.vkg, err = NewValidatorKeyGenerator(arg.KeyGeneratorForValidators)
 	if err != nil {
 		return err
 	}
 
-	dbs.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, randomizer, arg.NodePrice)
+	dbs.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, randomizer, arg.NodePrice, arg.NumShards, arg.GenerateWalletsInAllShards)
 	if err != nil {
 		return err
 	}

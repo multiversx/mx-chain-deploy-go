@@ -158,6 +158,10 @@ VERSION:
 		Usage: "round duration in miliseconds",
 		Value: 6000,
 	}
+	walletsInAllShards = cli.BoolFlag{
+		Name:  "wallets-in-all-shards",
+		Usage: "if this flag is set, then all generated wallets will be generated in all shards, in a round-robin fashion",
+	}
 
 	errInvalidNumPrivPubKeys = errors.New("invalid number of private/public keys to generate")
 	errInvalidNumOfNodes     = errors.New("invalid number of nodes in shard/metachain or in the consensus group")
@@ -198,6 +202,7 @@ func main() {
 		numDelegatedNodes,
 		maxNumValidatorsPerOwner,
 		roundDuration,
+		walletsInAllShards,
 	}
 	app.Authors = []cli.Author{
 		{
@@ -322,25 +327,27 @@ func generate(ctx *cli.Context) error {
 	defer outputHandler.Close()
 
 	argDataGenerator := factory.ArgDataGenerator{
-		KeyGeneratorForValidators: validatorKeyGenerator,
-		KeyGeneratorForWallets:    walletKeyGenerator,
-		WalletPubKeyConverter:     walletPubKeyConverter,
-		ValidatorPubKeyConverter:  validatorPubKeyConverter,
-		NumValidatorBlsKeys:       uint(numValidators),
-		NumObserverBlsKeys:        uint(numObservers),
-		RichestAccountMode:        withRichestAccount,
-		MaxNumNodesOnOwner:        maxNumValidatorsPerOwnerValue,
-		NumAdditionalWalletKeys:   uint(numOfAdditionalAccountsValue),
-		IntRandomizer:             &random.ConcurrentSafeIntRandomizer{},
-		NodePrice:                 nodePriceValue,
-		TotalSupply:               totalSupplyValue,
-		InitialRating:             initialRatingValue,
-		GenerationType:            stakeTypeString,
-		DelegationOwnerPkString:   delegationOwnerPkString,
-		DelegationOwnerNonce:      delegationOwnerNonce,
-		VmType:                    vmType,
-		NumDelegators:             numDelegatorsValue,
-		NumDelegatedNodes:         numDelegatedNodesValue,
+		KeyGeneratorForValidators:  validatorKeyGenerator,
+		KeyGeneratorForWallets:     walletKeyGenerator,
+		WalletPubKeyConverter:      walletPubKeyConverter,
+		ValidatorPubKeyConverter:   validatorPubKeyConverter,
+		NumValidatorBlsKeys:        uint(numValidators),
+		NumObserverBlsKeys:         uint(numObservers),
+		RichestAccountMode:         withRichestAccount,
+		MaxNumNodesOnOwner:         maxNumValidatorsPerOwnerValue,
+		NumAdditionalWalletKeys:    uint(numOfAdditionalAccountsValue),
+		IntRandomizer:              &random.ConcurrentSafeIntRandomizer{},
+		NodePrice:                  nodePriceValue,
+		TotalSupply:                totalSupplyValue,
+		InitialRating:              initialRatingValue,
+		GenerationType:             stakeTypeString,
+		DelegationOwnerPkString:    delegationOwnerPkString,
+		DelegationOwnerNonce:       delegationOwnerNonce,
+		VmType:                     vmType,
+		NumDelegators:              numDelegatorsValue,
+		NumDelegatedNodes:          numDelegatedNodesValue,
+		NumShards:                  shardCoordinator.NumberOfShards(),
+		GenerateWalletsInAllShards: ctx.GlobalBool(walletsInAllShards.Name),
 	}
 
 	dataGenerator, err := factory.CreateDataGenerator(argDataGenerator)
