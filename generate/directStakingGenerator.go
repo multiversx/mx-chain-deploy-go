@@ -51,7 +51,7 @@ func NewDirectStakingGenerator(arg ArgDirectStakingGenerator) (*directStakingGen
 		return nil, err
 	}
 
-	dsg.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, arg.IntRandomizer, arg.NodePrice)
+	dsg.wkg, err = NewWalletKeyGenerator(arg.KeyGeneratorForWallets, arg.IntRandomizer, arg.NodePrice, arg.NumShards, arg.GenerateWalletsInAllShards)
 	if err != nil {
 		return nil, err
 	}

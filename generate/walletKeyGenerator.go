@@ -3,6 +3,7 @@ package generate
 import (
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
 	crypto "github.com/multiversx/mx-chain-crypto-go"
@@ -10,13 +11,23 @@ import (
 )
 
 type walletKeyGenerator struct {
-	keyGen     crypto.KeyGenerator
-	randomizer IntRandomizer
-	nodePrice  *big.Int
+	keyGen              crypto.KeyGenerator
+	randomizer          IntRandomizer
+	nodePrice           *big.Int
+	mut                 sync.Mutex
+	crtShard            byte
+	numShards           uint32
+	generateInAllShards bool
 }
 
 // NewWalletKeyGenerator will create a new instance for the wallet key generator
-func NewWalletKeyGenerator(keyGen crypto.KeyGenerator, randomizer IntRandomizer, nodePrice *big.Int) (*walletKeyGenerator, error) {
+func NewWalletKeyGenerator(
+	keyGen crypto.KeyGenerator,
+	randomizer IntRandomizer,
+	nodePrice *big.Int,
+	numShards uint32,
+	generateInAllShards bool,
+) (*walletKeyGenerator, error) {
 	if check.IfNil(keyGen) {
 		return nil, ErrNilKeyGenerator
 	}
@@ -26,11 +37,16 @@ func NewWalletKeyGenerator(keyGen crypto.KeyGenerator, randomizer IntRandomizer,
 	if nodePrice == nil {
 		return nil, ErrNilNodePrice
 	}
+	if numShards == 0 {
+		return nil, ErrNumShardsIsZero
+	}
 
 	return &walletKeyGenerator{
-		keyGen:     keyGen,
-		randomizer: randomizer,
-		nodePrice:  nodePrice,
+		keyGen:              keyGen,
+		randomizer:          randomizer,
+		nodePrice:           nodePrice,
+		generateInAllShards: generateInAllShards,
+		numShards:           numShards,
 	}, nil
 }
 
@@ -76,20 +92,47 @@ func (wkg *walletKeyGenerator) GenerateKeys(blsKeys []*data.BlsKey, maxNumKeysOn
 
 func (wkg *walletKeyGenerator) generateWalletKey() (*data.WalletKey, error) {
 	var err error
-	sk, pk := wkg.keyGen.GeneratePair()
-	walletKey := &data.WalletKey{}
+
+	sk, pkBytes, err := wkg.generateKey()
+	if err != nil {
+		return nil, err
+	}
+
+	walletKey := &data.WalletKey{
+		PubKeyBytes: pkBytes,
+	}
 
 	walletKey.PrivKeyBytes, err = sk.ToByteArray()
 	if err != nil {
 		return nil, err
 	}
 
-	walletKey.PubKeyBytes, err = pk.ToByteArray()
-	if err != nil {
-		return nil, err
-	}
-
 	return walletKey, nil
+}
+
+func (wkg *walletKeyGenerator) generateKey() (crypto.PrivateKey, []byte, error) {
+	wkg.mut.Lock()
+	defer func() {
+		wkg.crtShard++
+		wkg.crtShard = wkg.crtShard % byte(wkg.numShards)
+
+		wkg.mut.Unlock()
+	}()
+
+	for {
+		sk, pk := wkg.keyGen.GeneratePair()
+
+		pkBytes, err := pk.ToByteArray()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if wkg.generateInAllShards && pkBytes[len(pkBytes)-1] != wkg.crtShard {
+			continue
+		}
+
+		return sk, pkBytes, nil
+	}
 }
 
 // GenerateAdditionalKeys will generate the additional wallet keys

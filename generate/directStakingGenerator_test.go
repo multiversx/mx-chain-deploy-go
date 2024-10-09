@@ -19,17 +19,19 @@ func createMockDirectStakingGeneratorArguments() ArgDirectStakingGenerator {
 	edSuite := ed25519.NewEd25519()
 
 	arg := ArgDirectStakingGenerator{
-		KeyGeneratorForValidators: signing.NewKeyGenerator(mclSuite),
-		KeyGeneratorForWallets:    signing.NewKeyGenerator(edSuite),
-		NumValidatorBlsKeys:       0,
-		NumObserverBlsKeys:        0,
-		RichestAccountMode:        false,
-		MaxNumNodesOnOwner:        0,
-		NumAdditionalWalletKeys:   0,
-		IntRandomizer:             &mock.IntRandomizerStub{},
-		NodePrice:                 big.NewInt(2500),
-		TotalSupply:               big.NewInt(20000000),
-		InitialRating:             50,
+		KeyGeneratorForValidators:  signing.NewKeyGenerator(mclSuite),
+		KeyGeneratorForWallets:     signing.NewKeyGenerator(edSuite),
+		NumValidatorBlsKeys:        0,
+		NumObserverBlsKeys:         0,
+		RichestAccountMode:         false,
+		MaxNumNodesOnOwner:         0,
+		NumAdditionalWalletKeys:    0,
+		IntRandomizer:              &mock.IntRandomizerStub{},
+		NodePrice:                  big.NewInt(2500),
+		TotalSupply:                big.NewInt(20000000),
+		InitialRating:              50,
+		NumShards:                  2,
+		GenerateWalletsInAllShards: true,
 	}
 	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, "erd")
 	arg.ValidatorPubKeyConverter, _ = pubkeyConverter.NewHexPubkeyConverter(96)

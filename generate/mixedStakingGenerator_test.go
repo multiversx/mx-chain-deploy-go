@@ -19,17 +19,19 @@ func createMockMixedStakingGeneratorArguments() ArgMixedStakingGenerator {
 	edSuite := ed25519.NewEd25519()
 
 	arg := ArgDelegatedStakingGenerator{
-		KeyGeneratorForValidators: signing.NewKeyGenerator(mclSuite),
-		KeyGeneratorForWallets:    signing.NewKeyGenerator(edSuite),
-		NumValidatorBlsKeys:       0,
-		NumObserverBlsKeys:        0,
-		RichestAccountMode:        false,
-		NumAdditionalWalletKeys:   0,
-		InitialRating:             50,
-		DelegationOwnerPkString:   "erd1vxy22x0fj4zv6hktmydg8vpfh6euv02cz4yg0aaws6rrad5a5awqgqky80",
-		DelegationOwnerNonce:      0,
-		VmType:                    "0500",
-		NumDelegators:             0,
+		KeyGeneratorForValidators:  signing.NewKeyGenerator(mclSuite),
+		KeyGeneratorForWallets:     signing.NewKeyGenerator(edSuite),
+		NumValidatorBlsKeys:        0,
+		NumObserverBlsKeys:         0,
+		RichestAccountMode:         false,
+		NumAdditionalWalletKeys:    0,
+		InitialRating:              50,
+		DelegationOwnerPkString:    "erd1vxy22x0fj4zv6hktmydg8vpfh6euv02cz4yg0aaws6rrad5a5awqgqky80",
+		DelegationOwnerNonce:       0,
+		VmType:                     "0500",
+		NumDelegators:              0,
+		NumShards:                  2,
+		GenerateWalletsInAllShards: true,
 	}
 	arg.WalletPubKeyConverter, _ = pubkeyConverter.NewBech32PubkeyConverter(32, "erd")
 	arg.ValidatorPubKeyConverter, _ = pubkeyConverter.NewHexPubkeyConverter(96)

@@ -34,8 +34,11 @@ If the hysteresis value is greater than 0, the binary will add more nodes as val
 compensate for the nodes in the waiting list. 
 
 ### Notes: 
-The optional flag called `-richest-account` can be used in order to increase the first wallet key to almost 
+* The optional flag called `-richest-account` can be used in order to increase the first wallet key to almost 
 all available balance left after the staking process occurred. This is helpful when dealing with automated staking scenarios.
+* The optional flag called `-wallets-in-all-shards` can be used to ensure that all generated wallets done by this tool will
+be distributed evenly on all shards in a round-robin manner.
+
 
 ### Running with docker
 ```

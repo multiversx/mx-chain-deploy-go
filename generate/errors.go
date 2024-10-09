@@ -22,3 +22,6 @@ var ErrInvalidNumberOfWalletKeys = errors.New("invalid number of wallet keys")
 
 // ErrNilPubKeyConverter signals that a nil pub key converter was provided
 var ErrNilPubKeyConverter = errors.New("nil pub key converter")
+
+// ErrNumShardsIsZero signals that the number of shards provided is 0
+var ErrNumShardsIsZero = errors.New("num shards is 0")
