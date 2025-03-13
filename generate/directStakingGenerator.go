@@ -5,9 +5,10 @@ import (
 	"math/big"
 
 	"github.com/multiversx/mx-chain-core-go/core/check"
-	"github.com/multiversx/mx-chain-deploy-go/data"
 	mxData "github.com/multiversx/mx-chain-go/genesis/data"
 	"github.com/multiversx/mx-chain-go/sharding"
+
+	"github.com/multiversx/mx-chain-deploy-go/data"
 )
 
 var minimumInitialBalance = big.NewInt(1000000000000000000) // 1eGLD
@@ -127,8 +128,9 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 ) []mxData.InitialAccount {
 	initialAccounts := make([]mxData.InitialAccount, 0, len(walletKeys)+len(additionalKeys))
 	for _, key := range walletKeys {
+		address, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      address,
 			Supply:       big.NewInt(0).Add(key.Balance, key.StakedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0).Set(key.StakedValue),
@@ -142,8 +144,9 @@ func (dsg *directStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range additionalKeys {
+		address, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      address,
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
