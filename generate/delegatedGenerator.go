@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/multiversx/mx-chain-deploy-go/data"
-	"github.com/multiversx/mx-chain-deploy-go/generate/disabled"
 	mxData "github.com/multiversx/mx-chain-go/genesis/data"
 	"github.com/multiversx/mx-chain-go/sharding"
+
+	"github.com/multiversx/mx-chain-deploy-go/data"
+	"github.com/multiversx/mx-chain-deploy-go/generate/disabled"
 )
 
 type delegatedStakingGenerator struct {
@@ -110,13 +111,15 @@ func (dsg *delegatedStakingGenerator) computeInitialAccounts(
 	initialAccounts := make([]mxData.InitialAccount, 0, len(walletKeys)+len(additionalKeys))
 
 	for _, key := range delegators {
+		address, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
+		delegationAddress, _ := dsg.walletPubKeyConverter.Encode(key.DelegatedPubKeyBytes)
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      address,
 			Supply:       big.NewInt(0).Add(key.Balance, key.DelegatedValue),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
 			Delegation: &mxData.DelegationData{
-				Address: dsg.walletPubKeyConverter.Encode(key.DelegatedPubKeyBytes),
+				Address: delegationAddress,
 				Value:   big.NewInt(0).Set(key.DelegatedValue),
 			},
 		}
@@ -125,8 +128,9 @@ func (dsg *delegatedStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range walletKeys {
+		address, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      address,
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
@@ -140,8 +144,9 @@ func (dsg *delegatedStakingGenerator) computeInitialAccounts(
 	}
 
 	for _, key := range additionalKeys {
+		address, _ := dsg.walletPubKeyConverter.Encode(key.PubKeyBytes)
 		account := mxData.InitialAccount{
-			Address:      dsg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			Address:      address,
 			Supply:       big.NewInt(0).Set(key.Balance),
 			Balance:      big.NewInt(0).Set(key.Balance),
 			StakingValue: big.NewInt(0),
@@ -161,8 +166,9 @@ func (dsg *delegatedStakingGenerator) computeInitialNodes(validators []*data.Bls
 	initialNodes := make([]*sharding.InitialNode, 0, len(validators))
 
 	for _, blsKey := range validators {
+		pubKey, _ := dsg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes)
 		initialNode := &sharding.InitialNode{
-			PubKey:        dsg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
+			PubKey:        pubKey,
 			Address:       dsg.delegationScPkString,
 			InitialRating: dsg.initialRating,
 		}

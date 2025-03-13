@@ -13,15 +13,16 @@ import (
 	"github.com/multiversx/mx-chain-crypto-go/signing"
 	"github.com/multiversx/mx-chain-crypto-go/signing/ed25519"
 	"github.com/multiversx/mx-chain-crypto-go/signing/mcl"
-	"github.com/multiversx/mx-chain-deploy-go/check"
-	"github.com/multiversx/mx-chain-deploy-go/core"
-	"github.com/multiversx/mx-chain-deploy-go/generate/factory"
-	"github.com/multiversx/mx-chain-deploy-go/plugins"
 	mxCommonFactory "github.com/multiversx/mx-chain-go/common/factory"
 	"github.com/multiversx/mx-chain-go/config"
 	"github.com/multiversx/mx-chain-go/sharding"
 	logger "github.com/multiversx/mx-chain-logger-go"
 	"github.com/urfave/cli"
+
+	"github.com/multiversx/mx-chain-deploy-go/check"
+	"github.com/multiversx/mx-chain-deploy-go/core"
+	"github.com/multiversx/mx-chain-deploy-go/generate/factory"
+	"github.com/multiversx/mx-chain-deploy-go/plugins"
 )
 
 const walletPubKeyFormat = "bech32"
@@ -128,7 +129,7 @@ VERSION:
 	delegationOwnerPublicKey = cli.StringFlag{
 		Name:  "delegation-owner-pk",
 		Usage: "defines the delegation owner public key, encoded in bech32 format",
-		Value: "erd1vxy22x0fj4zv6hktmydg8vpfh6euv02cz4yg0aaws6rrad5a5awqgqky80",
+		Value: "vibe1r7d892srrzq7uq530a94zmh0774gh6alpjh8cwcm98m4wzcpdtwqjfayme",
 	}
 	numDelegators = cli.UintFlag{
 		Name:  "num-delegators",
@@ -155,6 +156,11 @@ VERSION:
 		Name:  "round-duration",
 		Usage: "round duration in miliseconds",
 		Value: 5000,
+	}
+	hrp = cli.StringFlag{
+		Name:  "hrp",
+		Usage: "human-readable hrp",
+		Value: "erd",
 	}
 	sovereignConfig = cli.BoolFlag{
 		Name:  "sovereign",
@@ -200,6 +206,7 @@ func main() {
 		numDelegatedNodes,
 		maxNumValidatorsPerOwner,
 		roundDuration,
+		hrp,
 		sovereignConfig,
 	}
 	app.Authors = []cli.Author{
@@ -282,6 +289,7 @@ func generate(ctx *cli.Context) error {
 	numDelegatedNodesValue := ctx.GlobalUint(numDelegatedNodes.Name)
 	maxNumValidatorsPerOwnerValue := ctx.GlobalUint(maxNumValidatorsPerOwner.Name)
 	roundDurationValue := ctx.GlobalUint(roundDuration.Name)
+	hrp := ctx.GlobalString(hrp.Name)
 
 	err = prepareOutputDirectory(outputDirectory)
 	if err != nil {
@@ -314,7 +322,7 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	validatorPubKeyConverter, walletPubKeyConverter, err := createPubKeyConverters()
+	validatorPubKeyConverter, walletPubKeyConverter, err := createPubKeyConverters(hrp)
 	validatorKeyGenerator, walletKeyGenerator := createKeyGenerators()
 
 	shardCoordinator, err := sharding.NewMultiShardCoordinator(uint32(numOfShardsValue), 0)
@@ -409,10 +417,11 @@ func prepareOutputDirectory(outputDirectory string) error {
 	return err
 }
 
-func createPubKeyConverters() (mxCore.PubkeyConverter, mxCore.PubkeyConverter, error) {
+func createPubKeyConverters(hrp string) (mxCore.PubkeyConverter, mxCore.PubkeyConverter, error) {
 	walletPubKeyConverter, err := mxCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 32,
 		Type:   walletPubKeyFormat,
+		Hrp:    hrp,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w for walletPubKeyConverter", err)
@@ -421,6 +430,7 @@ func createPubKeyConverters() (mxCore.PubkeyConverter, mxCore.PubkeyConverter, e
 	validatorPubKeyConverter, err := mxCommonFactory.NewPubkeyConverter(config.PubkeyConfig{
 		Length: 96,
 		Type:   validatorPubKeyFormat,
+		Hrp:    hrp,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w for validatorPubKeyConverter", err)

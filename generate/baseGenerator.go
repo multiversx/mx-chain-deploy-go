@@ -4,8 +4,9 @@ import (
 	"math/big"
 
 	"github.com/multiversx/mx-chain-core-go/core"
-	"github.com/multiversx/mx-chain-deploy-go/data"
 	"github.com/multiversx/mx-chain-go/sharding"
+
+	"github.com/multiversx/mx-chain-deploy-go/data"
 )
 
 type baseGenerator struct {
@@ -61,9 +62,11 @@ func (bg *baseGenerator) computeInitialNodesForWalletKey(key *data.WalletKey) []
 	initialNodes := make([]*sharding.InitialNode, 0, len(key.BlsKeys))
 
 	for _, blsKey := range key.BlsKeys {
+		pubKey, _ := bg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes)
+		address, _ := bg.walletPubKeyConverter.Encode(key.PubKeyBytes)
 		initialNode := &sharding.InitialNode{
-			PubKey:        bg.validatorPubKeyConverter.Encode(blsKey.PubKeyBytes),
-			Address:       bg.walletPubKeyConverter.Encode(key.PubKeyBytes),
+			PubKey:        pubKey,
+			Address:       address,
 			InitialRating: bg.initialRating,
 		}
 		initialNodes = append(initialNodes, initialNode)
